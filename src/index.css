@@ -2,6 +2,9 @@
     --bg: #ffffff;
     --text: #111111;
     --text-muted: #666666;
+    --surface: #f4f4f5;
+    --border: #d4d4d8;
+    --accent: #ff6a00;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -9,6 +12,8 @@
         --bg: #0d0d0d;
         --text: #f2f2f2;
         --text-muted: #9a9a9a;
+        --surface: #1a1a1a;
+        --border: #333333;
     }
 }
 
@@ -22,9 +27,249 @@ body {
 .shell {
     max-width: 640px;
     margin: 0 auto;
-    padding: 48px 20px;
+    padding: 48px 20px 88px;
 }
 
 small {
     color: var(--text-muted);
+}
+
+/* run cards */
+.runs {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+}
+
+.card {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 8px;
+}
+
+/* bottom tab bar */
+.tabbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+}
+
+.tabbar a {
+    flex: 1;
+    text-align: center;
+    padding: 14px 4px;
+    font-size: 13px;
+    color: var(--text-muted);
+    text-decoration: none;
+    border-top: 3px solid transparent;
+}
+
+.tabbar a[aria-current="page"] {
+    color: var(--text);
+    font-weight: 700;
+    border-top-color: var(--accent);
+}
+
+/* login form */
+.form {
+    display: grid;
+    gap: 8px;
+    margin: 16px 0;
+}
+
+.form input {
+    height: 44px;
+    padding: 0 12px;
+    font-size: 16px;
+    color: var(--text);
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+}
+
+.form button {
+    height: 48px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #111;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+:root {
+    --danger: #b91c1c;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --danger: #f87171;
+    }
+}
+
+.error {
+    color: var(--danger);
+    margin: 4px 0;
+}
+
+.topbar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 12px 20px 0;
+}
+
+.topbar button {
+    height: 36px;
+    padding: 0 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    background: var(--surface);
+    color: var(--text);
+    border: 1.5px solid var(--border);
+}
+
+.form button:disabled {
+    opacity: 0.6;
+}
+
+.dialog {
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    width: min(92vw, 360px);
+}
+
+.dialog::backdrop {
+    background: rgba(0, 0, 0, 0.55);
+}
+
+.dialog-body {
+    padding: 20px;
+}
+
+.dialog-body h2 {
+    margin: 0 0 8px;
+    font-size: 18px;
+}
+
+.dialog-body p {
+    margin: 0 0 20px;
+    color: var(--text-muted);
+}
+
+.dialog-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.dialog-actions button {
+    height: 44px;
+    padding: 0 18px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-secondary {
+    background: var(--surface);
+    color: var(--text);
+    border: 1.5px solid var(--border);
+}
+
+.btn-primary {
+    background: var(--accent);
+    color: #111;
+    border: 0;
+}
+
+.dialog-actions button:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.field {
+    display: grid;
+    gap: 4px;
+}
+
+.form textarea {
+    padding: 10px 12px;
+    font-size: 16px;
+    font-family: inherit;
+    color: var(--text);
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    resize: vertical;
+}
+
+.form input[aria-invalid="true"],
+.form textarea[aria-invalid="true"] {
+    border-color: var(--danger);
+}
+
+.btn-danger {
+    background: var(--danger);
+    color: var(--bg);
+    border: 0;
+}
+
+.card-action {
+    margin-left: auto;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text);
+    background: transparent;
+    border: 1.5px solid var(--border);
+}
+
+.card-edit {
+    display: block;
+}
+
+.card-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+}
+
+.card-actions .card-action {
+    margin-left: 0;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.form-actions button {
+    flex: 1;
+}
+
+.form .btn-secondary {
+    background: var(--surface);
+    color: var(--text);
+    border: 1.5px solid var(--border);
 }

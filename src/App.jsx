@@ -1,22 +1,26 @@
-import { useEffect, useState } from 'react'
-
-const API_URL = import.meta.env.VITE_API_URL ?? '/api'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import Layout from './components/Layout.jsx'
+import ProtectedRoute from './auth/ProtectedRoute.jsx'
+import Login from './pages/Login.jsx'
+import Dashboard from './pages/Dashboard.jsx'
+import Activities from './pages/Activities.jsx'
+import ComingSoon from './pages/ComingSoon.jsx'
 
 export default function App() {
-  const [status, setStatus] = useState('checking...')
-
-  useEffect(() => {
-    fetch(`${API_URL}/health`)
-      .then((res) => res.json())
-      .then((data) => setStatus(data.status))
-      .catch(() => setStatus('unreachable'))
-  }, [])
-
   return (
-    <main className="shell">
-      <h1>RunPlan AI</h1>
-      <p>Adaptive Marathon Training Planner</p>
-      <small>API status: {status}</small>
-    </main>
+    <Routes>
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/login" element={<Login />} />
+      <Route element={<ProtectedRoute />}>
+        <Route element={<Layout />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/calendar" element={<ComingSoon title="Calendar" />} />
+          <Route path="/activities" element={<Activities />} />
+          <Route path="/plan" element={<ComingSoon title="Plan" />} />
+          <Route path="/profile" element={<ComingSoon title="Profile" />} />
+        </Route>
+      </Route>
+      <Route path="*" element={<ComingSoon title="Page not found" />} />
+    </Routes>
   )
 }

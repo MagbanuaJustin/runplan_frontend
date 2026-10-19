@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext.jsx'
 
 export default function Login() {
@@ -43,6 +43,7 @@ export default function Login() {
         {error && <p className="error" role="alert">{error}</p>}
         <button type="submit" disabled={busy}>{busy ? 'Logging in...' : 'Log in'}</button>
       </form>
+      <p>New here? <Link to="/register">Create an account</Link></p>
     </main>
   )
 }

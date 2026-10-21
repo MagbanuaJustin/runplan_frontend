@@ -27,11 +27,22 @@ async function request(path, options = {}, retried = false) {
     if (await refreshHandler()) return request(path, options, true)
   }
 
-  const data = await res.json().catch(() => ({}))
+  let data = null
+  try {
+    data = await res.json()
+  } catch {
+    data = null
+  }
+
   if (!res.ok) {
-    const err = new Error(data.error || `Request failed (${res.status})`)
+    const err = new Error(data?.error || `Request failed (${res.status})`)
     err.status = res.status
-    err.fields = data.fields
+    err.fields = data?.fields
+    throw err
+  }
+  if (data === null || typeof data !== 'object') {
+    const err = new Error('The server sent an unexpected reply. Please try again.')
+    err.status = res.status
     throw err
   }
   return data

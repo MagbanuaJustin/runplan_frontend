@@ -68,13 +68,17 @@ export default function Plan() {
       .catch(() => setState('error'))
   }, [])
 
-  async function generate() {
+    async function generate() {
     setBusy(true)
     setError(null)
     try {
       const body = await apiPost('/plans/generate')
-      setPlans((p) => ({ ...p, draft: { plan: body.data.plan, sessions: body.data.sessions } }))
-      setWarnings(body.data.warnings)
+      const result = body.data
+      if (!result?.plan || !Array.isArray(result.sessions)) {
+        throw new Error('The server returned an incomplete plan. Please try again.')
+      }
+      setPlans((p) => ({ ...p, draft: { plan: result.plan, sessions: result.sessions } }))
+      setWarnings(result.warnings ?? [])
     } catch (err) {
       setError({ message: err.message, fields: err.fields })
     } finally {

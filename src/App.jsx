@@ -6,6 +6,9 @@ import Dashboard from './pages/Dashboard.jsx'
 import Activities from './pages/Activities.jsx'
 import ComingSoon from './pages/ComingSoon.jsx'
 import Register from './pages/Register.jsx'
+import Profile from './pages/Profile.jsx'
+import Plan from './pages/Plan.jsx'
+import Calendar from './pages/Calendar.jsx'
 
 export default function App() {
   return (
@@ -16,10 +19,10 @@ export default function App() {
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/calendar" element={<ComingSoon title="Calendar" />} />
+          <Route path="/calendar" element={<Calendar />} />
           <Route path="/activities" element={<Activities />} />
-          <Route path="/plan" element={<ComingSoon title="Plan" />} />
-          <Route path="/profile" element={<ComingSoon title="Profile" />} />
+          <Route path="/plan" element={<Plan />} />
+          <Route path="/profile" element={<Profile />} />
         </Route>
       </Route>
       <Route path="*" element={<ComingSoon title="Page not found" />} />

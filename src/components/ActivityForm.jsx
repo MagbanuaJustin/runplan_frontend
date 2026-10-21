@@ -23,7 +23,7 @@ function Field({ id, label, error, children }) {
   )
 }
 
-export default function ActivityForm({ activity = null, onSaved, onCancel }) {
+export default function ActivityForm({ activity = null, sessionId = null, defaults = null, onSaved, onCancel }) {
   const editing = activity !== null
   const p = editing ? `edit-${activity.id}-` : 'new-' // keeps ids unique on the page
 
@@ -36,7 +36,7 @@ export default function ActivityForm({ activity = null, onSaved, onCancel }) {
           effort: activity.effort ?? '',
           notes: activity.notes ?? '',
         }
-      : { date: today(), distance: '', duration: '', effort: '', notes: '' },
+      : { date: defaults?.date ?? today(), distance: defaults?.distance ?? '', duration: '', effort: '', notes: '' },
   )
   const [errors, setErrors] = useState({})
   const [formError, setFormError] = useState('')
@@ -68,6 +68,7 @@ export default function ActivityForm({ activity = null, onSaved, onCancel }) {
         duration_seconds: seconds,
         effort: form.effort === '' ? null : form.effort,
         notes: form.notes,
+        ...(sessionId ? { session_id: sessionId } : {}),
       }
       const body = editing
         ? await apiPut(`/activities/${activity.id}`, payload)
@@ -106,6 +107,7 @@ export default function ActivityForm({ activity = null, onSaved, onCancel }) {
           value={form.notes} onChange={set('notes')} />
       </Field>
       <small>Pace is calculated automatically when you save.</small>
+      {errors.session_id && <p className="error" role="alert">{errors.session_id}</p>}
       {formError && <p className="error" role="alert">{formError}</p>}
       <div className="form-actions">
         <button type="submit" disabled={busy}>

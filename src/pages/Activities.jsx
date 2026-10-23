@@ -12,7 +12,7 @@ export default function Activities() {
 
   const [version, setVersion] = useState(0)
   const [session, setSession] = useState(null)
-  const [state, setState] = useState(sessionId ? 'loading' : 'none') // none | loading | ready | invalid
+  const [state, setState] = useState(sessionId ? 'loading' : 'none')
 
   useEffect(() => {
     if (!sessionId) return
@@ -43,29 +43,44 @@ export default function Activities() {
     <>
       <h1>Log a run</h1>
 
-      {state === 'invalid' && (
-        <p className="error" role="alert">
-          That session cannot be logged. It may already be completed. <Link to="/calendar">Back to calendar</Link>
-        </p>
-      )}
+      <div className="split-workspace">
+        <section className="plan-card" aria-labelledby="log-form-title">
+          <div className="panel-head">
+            <h2 id="log-form-title">Record manual workout</h2>
+            {session && <span className="pill">Linked session</span>}
+          </div>
 
-      {session && (
-        <p className="note" role="status">
-          Logging your <strong>{TYPE_LABELS[session.type]}</strong> planned for{' '}
-          {formatLongDate(session.scheduled_date)} ({session.planned_distance_km} km).{' '}
-          <Link to="/activities">Log a different run instead</Link>
-        </p>
-      )}
+          {state === 'invalid' && (
+            <p className="error" role="alert">
+              That session cannot be logged — it may already be completed.{' '}
+              <Link to="/calendar">Back to calendar</Link>
+            </p>
+          )}
 
-      <ActivityForm
-        key={session ? `s${session.id}` : 'free'}
-        sessionId={session?.id ?? null}
-        defaults={defaults}
-        onSaved={() => (session ? navigate('/calendar') : setVersion((v) => v + 1))}
-      />
+          {session && (
+            <div className="advisory-banner" role="status">
+              Logging your <strong>{TYPE_LABELS[session.type]}</strong> planned for{' '}
+              {formatLongDate(session.scheduled_date)} ({session.planned_distance_km} km).{' '}
+              <Link to="/activities">Log an unlinked run instead</Link>
+            </div>
+          )}
 
-      <h2>Your runs</h2>
-      <ActivityList key={version} />
+          <ActivityForm
+            key={session ? `s${session.id}` : 'free'}
+            sessionId={session?.id ?? null}
+            defaults={defaults}
+            onSaved={() => (session ? navigate('/calendar') : setVersion((v) => v + 1))}
+          />
+        </section>
+
+        <section className="plan-card" aria-labelledby="history-title">
+          <div className="panel-head">
+            <h2 id="history-title">Activity history</h2>
+            <span className="pill pill-muted">Manual runs</span>
+          </div>
+          <ActivityList key={version} />
+        </section>
+      </div>
     </>
   )
 }

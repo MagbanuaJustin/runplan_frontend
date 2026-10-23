@@ -9,6 +9,7 @@ import Register from './pages/Register.jsx'
 import Profile from './pages/Profile.jsx'
 import Plan from './pages/Plan.jsx'
 import Calendar from './pages/Calendar.jsx'
+import Status from './pages/Status.jsx'
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="/activities" element={<Activities />} />
           <Route path="/plan" element={<Plan />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/status" element={<Status />} />
         </Route>
       </Route>
       <Route path="*" element={<ComingSoon title="Page not found" />} />

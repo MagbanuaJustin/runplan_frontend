@@ -9,6 +9,13 @@ const GOALS = {
   marathon: 'Marathon', general_fitness: 'General fitness',
 }
 
+function formatTimestamp(ts) {
+  if (!ts) return ''
+  const iso = ts.includes('T') ? ts : ts.replace(' ', 'T') + 'Z'
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? ts : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
 function PlanSummary({ data }) {
   const { plan, sessions } = data
   const weeks = weeklySummary(sessions, plan.start_date)
@@ -53,24 +60,45 @@ function PlanSummary({ data }) {
 
 export default function Plan() {
   const [plans, setPlans] = useState({ active: null, draft: null })
+  const [revisions, setRevisions] = useState([])
   const [warnings, setWarnings] = useState([])
+  const [activeWarnings, setActiveWarnings] = useState([])
+  const [notice, setNotice] = useState('')
   const [state, setState] = useState('loading') // loading | ready | error
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
   const [confirming, setConfirming] = useState(false)
+  const [confirmRebuild, setConfirmRebuild] = useState(false)
+
+  async function loadRevisions(planId) {
+    if (!planId) {
+      setRevisions([])
+      return
+    }
+    try {
+      const rev = await apiGet(`/plans/${planId}/revisions`)
+      setRevisions(Array.isArray(rev.data) ? rev.data : [])
+    } catch {
+      setRevisions([])
+    }
+  }
 
   useEffect(() => {
     apiGet('/plans/current')
       .then((body) => {
         setPlans(body.data)
         setState('ready')
+        if (body.data?.active?.plan?.id) {
+          loadRevisions(body.data.active.plan.id)
+        }
       })
       .catch(() => setState('error'))
   }, [])
 
-    async function generate() {
+  async function generate() {
     setBusy(true)
     setError(null)
+    setNotice('')
     try {
       const body = await apiPost('/plans/generate')
       const result = body.data
@@ -89,15 +117,40 @@ export default function Plan() {
   async function approve() {
     setBusy(true)
     setError(null)
+    setNotice('')
     try {
       const body = await apiPost(`/plans/${plans.draft.plan.id}/approve`)
       setPlans({ active: body.data, draft: null })
       setWarnings([])
+      setActiveWarnings([])
+      setNotice('Your training plan is now active.')
+      await loadRevisions(body.data?.plan?.id)
     } catch (err) {
       setError({ message: err.message })
     } finally {
       setBusy(false)
       setConfirming(false)
+    }
+  }
+
+  async function rebuildRemaining() {
+    if (!plans.active?.plan?.id) return
+    setBusy(true)
+    setError(null)
+    setNotice('')
+    try {
+      const planId = plans.active.plan.id
+      const body = await apiPost(`/plans/${planId}/rebuild`)
+      const result = body.data
+      setPlans((p) => ({ ...p, active: { plan: result.plan, sessions: result.sessions } }))
+      setActiveWarnings(result.warnings ?? [])
+      setNotice(`Remaining schedule rebuilt (now version v${result.plan.version ?? 1}). Completed runs were preserved.`)
+      await loadRevisions(planId)
+    } catch (err) {
+      setError({ message: err.message, fields: err.fields })
+    } finally {
+      setBusy(false)
+      setConfirmRebuild(false)
     }
   }
 
@@ -113,6 +166,8 @@ export default function Plan() {
         This is general training guidance, not medical advice. Check with a doctor before
         starting a new training program.
       </p>
+
+      {notice && <p className="success" role="status">{notice}</p>}
 
       {error && (
         <div className="error" role="alert">
@@ -149,9 +204,55 @@ export default function Plan() {
 
       {active && (
         <section className="plan-card" aria-labelledby="active-title">
-          <h2 id="active-title">Your active plan <span className="badge">Active</span></h2>
+          <h2 id="active-title">
+            Your active plan{' '}
+            <span className="badge">Active &middot; v{active.plan.version ?? 1}</span>
+          </h2>
           <PlanSummary data={active} />
-          <p><Link to="/calendar">View your calendar</Link></p>
+          {activeWarnings.length > 0 && (
+            <ul className="warnings">
+              {activeWarnings.map((w) => <li key={w}>{w}</li>)}
+            </ul>
+          )}
+
+          {revisions.length > 0 && (
+            <details className="weeks">
+              <summary>Version history ({revisions.length})</summary>
+              <div className="table-wrap">
+                <table>
+                  <caption className="sr-only">History of changes to this training plan</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Version</th>
+                      <th scope="col">Date</th>
+                      <th scope="col">Change summary</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {revisions.map((r) => (
+                      <tr key={r.version}>
+                        <th scope="row">v{r.version}</th>
+                        <td>{formatTimestamp(r.created_at)}</td>
+                        <td className="wrap-cell">{r.summary}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          )}
+
+          <div className="btn-row">
+            <Link className="btn btn-secondary" to="/calendar">Open calendar</Link>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={busy}
+              onClick={() => setConfirmRebuild(true)}
+            >
+              Rebuild remaining plan
+            </button>
+          </div>
         </section>
       )}
 
@@ -171,6 +272,16 @@ export default function Plan() {
         busy={busy}
         onConfirm={approve}
         onCancel={() => setConfirming(false)}
+      />
+
+      <ConfirmDialog
+        open={confirmRebuild}
+        title="Rebuild remaining sessions?"
+        message="Completed runs stay untouched. Future sessions from tomorrow onward will be recalculated using your current profile and recent manual runs."
+        confirmLabel="Rebuild"
+        busy={busy}
+        onConfirm={rebuildRemaining}
+        onCancel={() => setConfirmRebuild(false)}
       />
     </>
   )

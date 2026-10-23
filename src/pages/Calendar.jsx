@@ -25,6 +25,9 @@ export default function Calendar() {
   const [selected, setSelected] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [moving, setMoving] = useState(false)
+  const [moveDate, setMoveDate] = useState('')
 
   const today = new Date().toLocaleDateString('en-CA')
 
@@ -59,14 +62,52 @@ export default function Calendar() {
     [runs],
   )
 
+  function selectDay(date) {
+    setSelected(date)
+    setMoving(false)
+    setError('')
+    setNotice('')
+  }
+
   async function changeStatus(session, status) {
     setBusy(true)
     setError('')
+    setNotice('')
     try {
       const body = await apiPatch(`/sessions/${session.id}`, { status })
       setData((d) => ({ ...d, sessions: d.sessions.map((s) => (s.id === session.id ? body.data : s)) }))
+      setNotice(status === 'skipped' ? 'Run marked as skipped.' : 'Run restored to planned.')
     } catch (err) {
       setError(err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function submitMove(e, session) {
+    e.preventDefault()
+    if (!moveDate) {
+      setError('Choose a new date for this run.')
+      return
+    }
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      const body = await apiPatch(`/sessions/${session.id}`, { scheduled_date: moveDate })
+      const updated = body.data
+      setData((d) => ({
+        ...d,
+        sessions: d.sessions
+          .map((s) => (s.id === session.id ? updated : s))
+          .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date)),
+      }))
+      setMoving(false)
+      setSelected(updated.scheduled_date)
+      setMonth(monthOf(updated.scheduled_date))
+      setNotice(`Moved ${TYPE_LABELS[updated.type].toLowerCase()} to ${formatLongDate(updated.scheduled_date)}.`)
+    } catch (err) {
+      setError(err.fields?.scheduled_date || err.message)
     } finally {
       setBusy(false)
     }
@@ -88,10 +129,11 @@ export default function Calendar() {
   const cells = monthGrid(month.y, month.m)
   const session = byDate.get(selected)
   const run = session ? runBySession.get(session.id) : null
+  const canMove = session && session.status !== 'completed' && session.type !== 'race'
 
   function goToday() {
     const day = today < start_date ? start_date : today > end_date ? end_date : today
-    setSelected(day)
+    selectDay(day)
     setMonth(monthOf(day))
   }
   const shift = (delta) => {
@@ -134,7 +176,7 @@ export default function Calendar() {
               aria-pressed={date === selected}
               aria-current={date === today ? 'date' : undefined}
               aria-label={label}
-              onClick={() => setSelected(date)}
+              onClick={() => selectDay(date)}
             >
               <span className="day-num">{Number(date.slice(8))}</span>
               {s && (
@@ -150,6 +192,8 @@ export default function Calendar() {
       <p className="note">
         E easy, L long, T tempo, I intervals, RACE race day. {MARKS.completed} done, {MARKS.skipped} skipped, ! missed.
       </p>
+
+      {notice && <p className="success" role="status">{notice}</p>}
 
       <section className="plan-card" aria-labelledby="day-title" aria-live="polite">
         <h2 id="day-title">{formatLongDate(selected)}</h2>
@@ -181,12 +225,55 @@ export default function Calendar() {
             {session.status !== 'completed' && (
               <div className="btn-row">
                 <Link className="btn btn-primary" to={`/activities?session=${session.id}`}>Log this run</Link>
+                {canMove && !moving && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    disabled={busy}
+                    onClick={() => {
+                      setMoving(true)
+                      setMoveDate(session.scheduled_date)
+                      setError('')
+                    }}
+                  >
+                    Move date
+                  </button>
+                )}
                 <button type="button" className="btn btn-secondary" disabled={busy}
                   onClick={() => changeStatus(session, session.status === 'skipped' ? 'planned' : 'skipped')}>
                   {session.status === 'skipped' ? 'Undo skip'
                     : session.status === 'missed' ? 'Mark as skipped' : 'Skip this run'}
                 </button>
               </div>
+            )}
+
+            {canMove && moving && (
+              <form className="inline-reschedule" onSubmit={(e) => submitMove(e, session)}>
+                <label className="field" htmlFor="move-date">
+                  <span>Move this run to an open day ({start_date} to {end_date})</span>
+                  <input
+                    id="move-date"
+                    type="date"
+                    min={start_date}
+                    max={end_date}
+                    value={moveDate}
+                    onChange={(e) => setMoveDate(e.target.value)}
+                  />
+                </label>
+                <div className="btn-row">
+                  <button type="submit" className="btn btn-primary" disabled={busy}>
+                    {busy ? 'Moving...' : 'Save new date'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    disabled={busy}
+                    onClick={() => { setMoving(false); setError('') }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
             )}
           </>
         )}

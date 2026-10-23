@@ -639,3 +639,91 @@ a.btn-secondary:visited {
     white-space: nowrap;
     color: var(--text-muted);
 }
+
+.topbar-email {
+    margin-right: auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.topbar-link,
+.topbar-link:visited {
+    display: inline-flex;
+    align-items: center;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    text-decoration: none;
+    color: var(--text);
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+}
+
+.topbar-link[aria-current="page"] {
+    border-color: var(--accent);
+    font-weight: 700;
+}
+
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 10px;
+    padding: 12px;
+    margin: 10px 0 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.filter-bar .field {
+    flex: 1 1 150px;
+    font-size: 13px;
+}
+
+.filter-bar input {
+    height: 40px;
+    padding: 0 10px;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+}
+
+.filter-clear {
+    margin-left: 0;
+    height: 40px;
+    min-height: 40px;
+}
+
+.card-note {
+    flex-basis: 100%;
+    padding-top: 4px;
+    border-top: 1px dashed var(--border);
+}
+
+.inline-reschedule {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    display: grid;
+    gap: 8px;
+}
+
+.inline-reschedule input {
+    height: 44px;
+    padding: 0 12px;
+    font-size: 16px;
+    color: var(--text);
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+}
+
+.table-wrap td.wrap-cell,
+.table-wrap th.wrap-cell {
+    white-space: normal;
+}

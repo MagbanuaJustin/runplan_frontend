@@ -101,8 +101,8 @@ export default function Dashboard() {
       )}
 
       <section className="plan-card" aria-labelledby="chart-title">
-        <h2 id="chart-title">Weekly distance</h2>
-        <p className="note">Each bar is a 7-day block. The mark shows what the plan asked for.</p>
+        <h2 id="chart-title">Weekly distance &amp; pace</h2>
+        <p className="note">Each bar is a 7-day block of manual runs. The mark shows planned distance.</p>
         <ul className="bars">
           {weeks.map((w) => (
             <li key={w.end} className="bar-row">
@@ -115,6 +115,7 @@ export default function Dashboard() {
               </span>
               <span className="bar-value">
                 {w.actual_km} km{showPlanned(w) ? ` of ${w.planned_km}` : ''}
+                {w.actual_pace_label ? ` \u00b7 ${w.actual_pace_label}/km` : ''}
               </span>
             </li>
           ))}

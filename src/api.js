@@ -27,9 +27,10 @@ async function request(path, options = {}, retried = false) {
     if (await refreshHandler()) return request(path, options, true)
   }
 
+  const text = await res.text()
   let data = null
   try {
-    data = await res.json()
+    data = JSON.parse(text)
   } catch {
     data = null
   }
@@ -41,7 +42,8 @@ async function request(path, options = {}, retried = false) {
     throw err
   }
   if (data === null || typeof data !== 'object') {
-    const err = new Error('The server sent an unexpected reply. Please try again.')
+    console.error('Unexpected reply from', path, 'status', res.status, 'body starts with:', text.slice(0, 300))
+    const err = new Error(`The server sent an unexpected reply (status ${res.status}). Please try again.`)
     err.status = res.status
     throw err
   }

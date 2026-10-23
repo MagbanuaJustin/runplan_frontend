@@ -28,8 +28,9 @@ export default function Layout() {
   return (
     <>
       <header className="topbar">
-        <small>{user?.email}</small>
-        <button onClick={() => setConfirming(true)}>Log out</button>
+        <small className="topbar-email">{user?.email}</small>
+        <NavLink className="topbar-link" to="/status">System</NavLink>
+        <button type="button" onClick={() => setConfirming(true)}>Log out</button>
       </header>
       <main className="shell">
         <Outlet />

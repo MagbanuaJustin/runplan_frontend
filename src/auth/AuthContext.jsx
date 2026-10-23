@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
-import { apiPost, setAccessToken, setRefreshHandler } from '../api.js'
+import { apiGet, apiPost, setAccessToken, setRefreshHandler } from '../api.js'
 
 const AuthContext = createContext(null)
 
@@ -21,6 +21,12 @@ export function AuthProvider({ children }) {
     setStatus('out')
   }
 
+  async function refreshUser() {
+    const body = await apiGet('/auth/me')
+    if (body?.data) setUser(body.data)
+    return body?.data ?? null
+  }
+
   // Used by api.js when a request gets 401. One shared promise, so parallel
   // 401s trigger only ONE refresh (the refresh token is single-use).
   useEffect(() => {
@@ -39,7 +45,12 @@ export function AuthProvider({ children }) {
     if (started.current) return // StrictMode runs effects twice in dev
     started.current = true
     apiPost('/auth/refresh')
-      .then((body) => startSession(body.data))
+      .then((body) => {
+        startSession(body.data)
+        return apiGet('/auth/me').then((me) => {
+          if (me?.data) setUser(me.data)
+        }).catch(() => {})
+      })
       .catch(() => setStatus('out'))
   }, [])
 
@@ -57,7 +68,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, status, login, logout }}>
+    <AuthContext.Provider value={{ user, status, login, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   )

@@ -10,6 +10,10 @@ export function setRefreshHandler(fn) {
   refreshHandler = fn
 }
 
+function snippet(text, limit = 220) {
+  return String(text ?? '').replace(/\s+/g, ' ').trim().slice(0, limit)
+}
+
 async function request(path, options = {}, retried = false) {
   const { method = 'GET', body } = options
   const headers = {}
@@ -19,10 +23,10 @@ async function request(path, options = {}, retried = false) {
   const res = await fetch(`${API_URL}${path}`, {
     method,
     headers,
+    credentials: 'include',
     body: body !== undefined ? JSON.stringify(body) : undefined,
   })
 
-  // Access token expired: refresh once, then retry the same request once
   if (res.status === 401 && !retried && refreshHandler && !path.startsWith('/auth/')) {
     if (await refreshHandler()) return request(path, options, true)
   }
@@ -41,10 +45,17 @@ async function request(path, options = {}, retried = false) {
     err.fields = data?.fields
     throw err
   }
+
   if (data === null || typeof data !== 'object') {
     console.error('Unexpected reply from', path, 'status', res.status, 'body starts with:', text.slice(0, 300))
-    const err = new Error(`The server sent an unexpected reply (status ${res.status}). Please try again.`)
+    const detail = snippet(text)
+    const err = new Error(
+      detail
+        ? `The server sent an unexpected reply (status ${res.status}). Server said: ${detail}`
+        : `The server sent an unexpected reply (status ${res.status}) with an empty body.`,
+    )
     err.status = res.status
+    err.body = detail
     throw err
   }
   return data

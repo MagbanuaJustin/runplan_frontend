@@ -11,12 +11,29 @@ const DAYS = [
   ['mon', 'Mon'], ['tue', 'Tue'], ['wed', 'Wed'], ['thu', 'Thu'],
   ['fri', 'Fri'], ['sat', 'Sat'], ['sun', 'Sun'],
 ]
-const TIMES = [['morning', 'Morning'], ['afternoon', 'Afternoon'], ['evening', 'Evening']]
+const TIMES = [
+  ['morning', 'Morning (6:30 AM)'],
+  ['afternoon', 'Afternoon (2:00 PM)'],
+  ['evening', 'Evening (6:30 PM)'],
+]
+const SESSION_COUNTS = [2, 3, 4, 5, 6]
 
 const empty = {
-  display_name: '', experience: '', goal: '', target_race_date: '',
-  available_days: [], preferred_time: '', baseline_distance_km: '', baseline_pace: '',
+  display_name: '',
+  experience: '',
+  goal: '',
+  target_race_date: '',
+  available_days: [],
+  desired_sessions_per_week: '',
+  preferred_time: '',
+  baseline_distance_km: '',
+  baseline_pace: '',
+  location_label: '',
+  latitude: '',
+  longitude: '',
 }
+
+const numToText = (value) => (value === null || value === undefined ? '' : String(value))
 
 function fromApi(p) {
   return {
@@ -25,9 +42,18 @@ function fromApi(p) {
     goal: p.goal,
     target_race_date: p.target_race_date ?? '',
     available_days: p.available_days,
+    desired_sessions_per_week:
+      p.desired_sessions_per_week === null || p.desired_sessions_per_week === undefined
+        ? ''
+        : String(p.desired_sessions_per_week),
     preferred_time: p.preferred_time ?? '',
     baseline_distance_km: p.baseline_distance_km === null ? '' : String(p.baseline_distance_km),
     baseline_pace: p.baseline_pace_label ?? '',
+    // Phase 4: optional training location. Older backends do not send this
+    // block at all, so every read is defensive.
+    location_label: p.location?.label ?? '',
+    latitude: numToText(p.location?.latitude),
+    longitude: numToText(p.location?.longitude),
   }
 }
 
@@ -85,8 +111,23 @@ export default function Profile() {
       }
     }
 
+    // A location needs either a name or BOTH coordinates; half a coordinate is
+    // a typo, and the backend says so in the same words.
+    const label = form.location_label.trim()
+    const lat = form.latitude.trim()
+    const lon = form.longitude.trim()
+    const locationErrors = {}
+    if ((lat === '') !== (lon === '')) {
+      locationErrors[lat === '' ? 'latitude' : 'longitude'] = 'Enter both latitude and longitude, or leave both empty.'
+    }
+    if (Object.keys(locationErrors).length) {
+      setErrors(locationErrors)
+      return
+    }
+
     const raceGoal = form.goal !== '' && form.goal !== 'general_fitness'
     const distance = form.baseline_distance_km.trim()
+    const desired = form.desired_sessions_per_week === '' ? null : Number(form.desired_sessions_per_week)
 
     setErrors({})
     setBusy(true)
@@ -97,9 +138,13 @@ export default function Profile() {
         goal: form.goal,
         target_race_date: raceGoal ? form.target_race_date : null,
         available_days: form.available_days,
+        desired_sessions_per_week: desired,
         preferred_time: form.preferred_time || null,
         baseline_distance_km: distance === '' ? null : distance,
         baseline_pace: pace,
+        location_label: label === '' ? null : label,
+        latitude: lat === '' ? null : lat,
+        longitude: lon === '' ? null : lon,
       })
       setForm(fromApi(body.data))
       setSaved(true)
@@ -127,10 +172,10 @@ export default function Profile() {
           <span className="pill">Runner profile</span>
         </div>
         <p className="note">
-          RunPlan uses these inputs to calculate weekly distance progression, taper length, and target paces.
+          RunPlan uses these inputs to calculate weekly distance progression, workout start times, taper length, and target paces.
         </p>
 
-        {saved && <p className="success" role="status">Profile saved.</p>}
+        {saved && <p className="success" role="status">Profile saved. Propose a plan revision on the Plan page to apply schedule changes to an active plan.</p>}
 
         <form className="form" onSubmit={handleSubmit} noValidate>
           <div className="form-grid-2">
@@ -180,15 +225,6 @@ export default function Profile() {
             )}
           </div>
 
-          {raceGoal && (
-            <Field id="pf-time" label="Preferred time of day (optional)" error={errors.preferred_time}>
-              <select {...attrs('pf-time', 'preferred_time')} value={form.preferred_time} onChange={set('preferred_time')}>
-                <option value="">No preference</option>
-                {TIMES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-              </select>
-            </Field>
-          )}
-
           <fieldset className="fieldset" aria-describedby={errors.available_days ? 'pf-days-error' : undefined}>
             <legend>Available training days (choose at least 2)</legend>
             <div className="days">
@@ -203,6 +239,35 @@ export default function Profile() {
               <p id="pf-days-error" className="error" role="alert">{errors.available_days}</p>
             )}
           </fieldset>
+
+          <div className="form-grid-2">
+            <Field
+              id="pf-desired"
+              label="Desired runs per week (optional)"
+              hint="Cannot exceed your checked available days."
+              error={errors.desired_sessions_per_week}
+            >
+              <select
+                {...attrs('pf-desired', 'desired_sessions_per_week', true)}
+                value={form.desired_sessions_per_week}
+                onChange={set('desired_sessions_per_week')}
+              >
+                <option value="">Auto (match available days &amp; experience)</option>
+                {SESSION_COUNTS.map((n) => (
+                  <option key={n} value={String(n)}>{n} runs / week</option>
+                ))}
+              </select>
+            </Field>
+
+            {raceGoal && (
+              <Field id="pf-time" label="Preferred time of day (optional)" error={errors.preferred_time}>
+                <select {...attrs('pf-time', 'preferred_time')} value={form.preferred_time} onChange={set('preferred_time')}>
+                  <option value="">No preference</option>
+                  {TIMES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
+              </Field>
+            )}
+          </div>
 
           <div className="form-grid-2">
             <Field id="pf-km" label="Recent run distance in km (optional)" error={errors.baseline_distance_km}>
@@ -229,6 +294,58 @@ export default function Profile() {
               />
             </Field>
           </div>
+
+          {/* Phase 4: advisory weather lookup. Optional on purpose - the planner
+              and every other screen work exactly the same without it. */}
+          <fieldset className="fieldset">
+            <legend>Training location (optional, used for weather advisories)</legend>
+            <Field
+              id="pf-location"
+              label="City or area"
+              hint="For example: Calapan, PH. Leave empty to skip weather."
+              error={errors.location_label}
+            >
+              <input
+                {...attrs('pf-location', 'location_label', true)}
+                autoComplete="off"
+                maxLength={120}
+                placeholder="Calapan, PH"
+                value={form.location_label}
+                onChange={set('location_label')}
+              />
+            </Field>
+
+            <div className="form-grid-2">
+              <Field id="pf-lat" label="Latitude (optional)" error={errors.latitude}>
+                <input
+                  {...attrs('pf-lat', 'latitude')}
+                  inputMode="decimal"
+                  placeholder="13.2233"
+                  value={form.latitude}
+                  onChange={set('latitude')}
+                />
+              </Field>
+
+              <Field
+                id="pf-lon"
+                label="Longitude (optional)"
+                hint="Leave both coordinates blank and RunPlan will look the city up for you."
+                error={errors.longitude}
+              >
+                <input
+                  {...attrs('pf-lon', 'longitude', true)}
+                  inputMode="decimal"
+                  placeholder="120.5956"
+                  value={form.longitude}
+                  onChange={set('longitude')}
+                />
+              </Field>
+            </div>
+
+            <p className="note" style={{ marginBottom: 0 }}>
+              Weather is advisory only. It never moves, shortens or skips a scheduled workout.
+            </p>
+          </fieldset>
 
           {formError && <p className="error" role="alert">{formError}</p>}
 

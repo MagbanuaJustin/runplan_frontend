@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiGet, apiPatch } from '../api.js'
+import { useWeather, WeatherDayNotes } from '../components/WeatherPanel.jsx'
+import CalendarSyncCard from '../components/CalendarSyncCard.jsx'
 import {
   STATUS_LABELS, TYPE_LABELS, TYPE_SHORT,
   formatDuration, formatLongDate, monthGrid, paceLabel,
@@ -23,6 +25,17 @@ const monthIndex = ({ y, m }) => y * 12 + m
 const monthTitle = ({ y, m }) =>
   new Date(Date.UTC(y, m, 1)).toLocaleDateString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' })
 
+function formatStartTime(hhmmss) {
+  if (!hhmmss) return 'Flexible'
+  const [hStr, mStr] = hhmmss.split(':')
+  const h = Number(hStr)
+  const m = Number(mStr)
+  if (Number.isNaN(h) || Number.isNaN(m)) return hhmmss
+  const suffix = h >= 12 ? 'PM' : 'AM'
+  const h12 = h % 12 || 12
+  return `${h12}:${String(m).padStart(2, '0')} ${suffix}`
+}
+
 export default function Calendar() {
   const [data, setData] = useState(null)
   const [runs, setRuns] = useState([])
@@ -34,8 +47,11 @@ export default function Calendar() {
   const [notice, setNotice] = useState('')
   const [moving, setMoving] = useState(false)
   const [moveDate, setMoveDate] = useState('')
+  const [skipping, setSkipping] = useState(false)
+  const [skipReason, setSkipReason] = useState('')
 
   const today = new Date().toLocaleDateString('en-CA')
+  const { byDate: weatherByDate } = useWeather()
 
   useEffect(() => {
     Promise.all([apiGet('/plans/current'), apiGet('/activities')])
@@ -71,23 +87,35 @@ export default function Calendar() {
   function selectDay(date) {
     setSelected(date)
     setMoving(false)
+    setSkipping(false)
+    setSkipReason('')
     setError('')
     setNotice('')
   }
 
-  async function changeStatus(session, status) {
+  async function changeStatus(session, status, reasonText = null) {
     setBusy(true)
     setError('')
     setNotice('')
     try {
-      const body = await apiPatch(`/sessions/${session.id}`, { status })
+      const payload = status === 'skipped'
+        ? { status, skip_reason: reasonText?.trim() || null }
+        : { status }
+      const body = await apiPatch(`/sessions/${session.id}`, payload)
       setData((d) => ({ ...d, sessions: d.sessions.map((s) => (s.id === session.id ? body.data : s)) }))
+      setSkipping(false)
+      setSkipReason('')
       setNotice(status === 'skipped' ? 'Run marked as skipped.' : 'Run restored to planned.')
     } catch (err) {
-      setError(err.message)
+      setError(err.fields?.skip_reason || err.message)
     } finally {
       setBusy(false)
     }
+  }
+
+  function handleSkipSubmit(e, session) {
+    e.preventDefault()
+    changeStatus(session, 'skipped', skipReason)
   }
 
   async function submitMove(e, session) {
@@ -125,6 +153,7 @@ export default function Calendar() {
     return (
       <>
         <h1>Calendar</h1>
+        <CalendarSyncCard />
         <section className="plan-card">
           <h2>No active training plan</h2>
           <p className="note">Generate and approve a plan first to view and reschedule workouts on your calendar.</p>
@@ -155,6 +184,7 @@ export default function Calendar() {
   return (
     <>
       <h1>Calendar</h1>
+      <CalendarSyncCard />
       {notice && <p className="success" role="status">{notice}</p>}
 
       <div className="split-workspace">
@@ -244,9 +274,18 @@ export default function Calendar() {
                   <dt>Target Pace</dt>
                   <dd>{paceLabel(session.planned_duration_seconds, session.planned_distance_km)}</dd>
                 </div>
+                <div><dt>Planned Start</dt><dd>{formatStartTime(session.planned_start_time)}</dd></div>
               </dl>
 
+              <WeatherDayNotes day={weatherByDate[selected]} />
+
               {session.notes && <p className="note">{session.notes}</p>}
+
+              {session.status === 'skipped' && session.skip_reason && (
+                <p className="note" style={{ marginTop: 0 }}>
+                  <strong>Skip reason:</strong> {session.skip_reason}
+                </p>
+              )}
 
               {run && (
                 <div className="success" role="status" style={{ marginBottom: 0 }}>
@@ -270,6 +309,7 @@ export default function Calendar() {
                       disabled={busy}
                       onClick={() => {
                         setMoving(true)
+                        setSkipping(false)
                         setMoveDate(session.scheduled_date)
                         setError('')
                       }}
@@ -277,19 +317,62 @@ export default function Calendar() {
                       Move date
                     </button>
                   )}
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    disabled={busy}
-                    onClick={() => changeStatus(session, session.status === 'skipped' ? 'planned' : 'skipped')}
-                  >
-                    {session.status === 'skipped'
-                      ? 'Undo skip'
-                      : session.status === 'missed'
-                        ? 'Mark as skipped'
-                        : 'Skip run'}
-                  </button>
+                  {session.status === 'skipped' ? (
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      disabled={busy}
+                      onClick={() => changeStatus(session, 'planned')}
+                    >
+                      Undo skip
+                    </button>
+                  ) : (
+                    !skipping && (
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        disabled={busy}
+                        onClick={() => {
+                          setSkipping(true)
+                          setMoving(false)
+                          setSkipReason('')
+                          setError('')
+                        }}
+                      >
+                        {session.status === 'missed' ? 'Mark as skipped' : 'Skip run'}
+                      </button>
+                    )
+                  )}
                 </div>
+              )}
+
+              {skipping && session.status !== 'completed' && session.status !== 'skipped' && (
+                <form className="inline-reschedule" onSubmit={(e) => handleSkipSubmit(e, session)}>
+                  <label className="field" htmlFor="skip-reason">
+                    <span>Reason for skipping this workout (optional)</span>
+                    <input
+                      id="skip-reason"
+                      type="text"
+                      maxLength={255}
+                      placeholder="e.g., Sore calf, work shift, heavy rain"
+                      value={skipReason}
+                      onChange={(e) => setSkipReason(e.target.value)}
+                    />
+                  </label>
+                  <div className="btn-row">
+                    <button type="submit" className="btn btn-primary" disabled={busy}>
+                      {busy ? 'Saving...' : 'Confirm skip'}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      disabled={busy}
+                      onClick={() => { setSkipping(false); setSkipReason(''); setError('') }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
               )}
 
               {canMove && moving && (

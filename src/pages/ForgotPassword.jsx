@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { apiPost } from '../api.js'
 import { useAuth } from '../auth/AuthContext.jsx'
+import useRecaptcha from '../auth/useRecaptcha.js'
 import { BrandLogo, ThemeToggle } from '../components/Layout.jsx'
 import Field from '../components/Field.jsx'
 
 export default function ForgotPassword() {
   const { status } = useAuth()
+  const recaptcha = useRecaptcha()
   const [email, setEmail] = useState('')
   const [fieldError, setFieldError] = useState('')
   const [error, setError] = useState('')
@@ -26,7 +28,11 @@ export default function ForgotPassword() {
     setResult(null)
     setBusy(true)
     try {
-      const body = await apiPost('/auth/forgot-password', { email: email.trim() })
+      const recaptchaToken = recaptcha.getToken()
+      const body = await apiPost('/auth/forgot-password', {
+        email: email.trim(),
+        recaptcha_token: recaptchaToken,
+      })
       setResult(body.data)
     } catch (err) {
       if (err.fields?.email) {
@@ -35,6 +41,7 @@ export default function ForgotPassword() {
         setError(err.message)
       }
     } finally {
+      recaptcha.reset()
       setBusy(false)
     }
   }
@@ -118,10 +125,31 @@ export default function ForgotPassword() {
                 />
               </Field>
 
+              <div className="field recaptcha-field">
+                <label>Human verification</label>
+                <div className="recaptcha-widget" ref={recaptcha.containerRef} />
+                {recaptcha.error ? (
+                  <p className="error" role="alert">{recaptcha.error}</p>
+                ) : !recaptcha.ready ? (
+                  <small role="status">Loading secure verification…</small>
+                ) : recaptcha.verified ? (
+                  <small className="recaptcha-success" role="status">Verification complete.</small>
+                ) : (
+                  <small role="status">Complete the checkbox to continue.</small>
+                )}
+              </div>
+
               {error && <p className="error" role="alert">{error}</p>}
-              <button type="submit" disabled={busy}>
+              <button type="submit" disabled={busy || !recaptcha.verified}>
                 {busy ? 'Generating link...' : 'Send recovery link'}
               </button>
+              <div className="recaptcha-disclosure">
+                <small>
+                  This site is protected by reCAPTCHA and the Google{' '}
+                  <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>{' '}
+                  and <a href="https://policies.google.com/terms" target="_blank" rel="noreferrer">Terms of Service</a> apply.
+                </small>
+              </div>
             </form>
           )}
 

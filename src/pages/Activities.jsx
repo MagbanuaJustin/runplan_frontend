@@ -13,31 +13,91 @@ export default function Activities() {
   const [version, setVersion] = useState(0)
   const [session, setSession] = useState(null)
   const [state, setState] = useState(sessionId ? 'loading' : 'none')
+  const [resolvedSessionId, setResolvedSessionId] = useState(null)
+  const [notice, setNotice] = useState('')
 
   useEffect(() => {
-    if (!sessionId) return
+    if (!sessionId) {
+      setSession(null)
+      setState('none')
+      setResolvedSessionId(null)
+      return
+    }
+
+    let cancelled = false
+
+    setSession(null)
+    setState('loading')
+    setResolvedSessionId(null)
+
     apiGet('/plans/current')
       .then((body) => {
-        const s = body.data.active?.sessions.find((x) => String(x.id) === sessionId)
-        if (s && s.status !== 'completed') {
-          setSession(s)
+        if (cancelled) return
+
+        const sessions = body.data?.active?.sessions
+        const found = Array.isArray(sessions)
+          ? sessions.find((item) => String(item.id) === sessionId)
+          : null
+
+        setResolvedSessionId(sessionId)
+
+        if (found && found.status !== 'completed') {
+          setSession(found)
           setState('ready')
         } else {
+          setSession(null)
           setState('invalid')
         }
       })
-      .catch(() => setState('invalid'))
+      .catch(() => {
+        if (cancelled) return
+        setSession(null)
+        setState('invalid')
+        setResolvedSessionId(sessionId)
+      })
+
+    return () => {
+      cancelled = true
+    }
   }, [sessionId])
 
-  if (state === 'loading') return <p role="status">Loading session...</p>
+  const selectedSession =
+    sessionId && session && String(session.id) === sessionId
+      ? session
+      : null
+
+  if (sessionId && resolvedSessionId !== sessionId) {
+    return <p role="status">Loading session...</p>
+  }
 
   const today = new Date().toLocaleDateString('en-CA')
-  const defaults = session
+  const defaults = selectedSession
     ? {
-        date: session.scheduled_date <= today ? session.scheduled_date : today,
-        distance: String(session.planned_distance_km),
+        date: selectedSession.scheduled_date <= today
+          ? selectedSession.scheduled_date
+          : today,
+        distance: String(selectedSession.planned_distance_km),
       }
     : null
+
+  function handleSaved(row) {
+    setVersion((current) => current + 1)
+
+    if (selectedSession) {
+      const workout = TYPE_LABELS[selectedSession.type] ?? 'workout'
+      setNotice(
+        `Run saved and linked to your ${workout} session on ${formatLongDate(selectedSession.scheduled_date)}.`,
+      )
+      navigate('/activities', { replace: true })
+      return
+    }
+
+    setNotice(
+      row?.activity_date
+        ? `Run saved successfully for ${formatLongDate(row.activity_date)}.`
+        : 'Run saved successfully.',
+    )
+  }
 
   return (
     <>
@@ -47,29 +107,32 @@ export default function Activities() {
         <section className="plan-card" aria-labelledby="log-form-title">
           <div className="panel-head">
             <h2 id="log-form-title">Record manual workout</h2>
-            {session && <span className="pill">Linked session</span>}
+            {selectedSession && <span className="pill">Linked session</span>}
           </div>
 
-          {state === 'invalid' && (
+          {notice && <p className="success" role="status">{notice}</p>}
+
+          {state === 'invalid' && sessionId && (
             <p className="error" role="alert">
               That session cannot be logged — it may already be completed.{' '}
               <Link to="/calendar">Back to calendar</Link>
             </p>
           )}
 
-          {session && (
+          {selectedSession && (
             <div className="advisory-banner" role="status">
-              Logging your <strong>{TYPE_LABELS[session.type]}</strong> planned for{' '}
-              {formatLongDate(session.scheduled_date)} ({session.planned_distance_km} km).{' '}
+              Logging your <strong>{TYPE_LABELS[selectedSession.type]}</strong>{' '}
+              planned for {formatLongDate(selectedSession.scheduled_date)} (
+              {selectedSession.planned_distance_km} km).{' '}
               <Link to="/activities">Log an unlinked run instead</Link>
             </div>
           )}
 
           <ActivityForm
-            key={session ? `s${session.id}` : 'free'}
-            sessionId={session?.id ?? null}
+            key={selectedSession ? `s${selectedSession.id}` : 'free'}
+            sessionId={selectedSession?.id ?? null}
             defaults={defaults}
-            onSaved={() => (session ? navigate('/calendar') : setVersion((v) => v + 1))}
+            onSaved={handleSaved}
           />
         </section>
 

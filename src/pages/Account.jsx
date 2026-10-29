@@ -67,7 +67,10 @@ export default function Account() {
     const nextErrs = {}
     if (!currentPassword) nextErrs.current_password = 'Enter your current password.'
     if (newPassword.length < 8) nextErrs.new_password = 'Use at least 8 characters.'
-    if (newPassword !== confirmNewPassword) nextErrs.confirm_new_password = 'New passwords do not match.'
+    if (newPassword !== confirmNewPassword) {
+      nextErrs.confirm_new_password = 'New passwords do not match.'
+    }
+
     if (Object.keys(nextErrs).length > 0) {
       setPwFields(nextErrs)
       return
@@ -79,9 +82,11 @@ export default function Account() {
         current_password: currentPassword,
         new_password: newPassword,
       })
+
       if (res.data?.access_token) {
         setAccessToken(res.data.access_token)
       }
+
       setCurrentPassword('')
       setNewPassword('')
       setConfirmNewPassword('')
@@ -107,6 +112,7 @@ export default function Account() {
     if ((account?.has_password ?? true) && !delPassword) {
       nextErrs.password = 'Enter your current password to confirm.'
     }
+
     if (Object.keys(nextErrs).length > 0) {
       setDelFields(nextErrs)
       return
@@ -118,12 +124,14 @@ export default function Account() {
   async function handleConfirmDelete() {
     setDelBusy(true)
     setDelError('')
+
     try {
       const res = await apiPost('/account/delete', {
         password: delPassword,
         confirm_text: delConfirmText.trim().toUpperCase(),
         reason: delReason.trim() || null,
       })
+
       setDelDialogOpen(false)
       clearSession()
       navigate('/login', {
@@ -155,10 +163,12 @@ export default function Account() {
             {account?.status === 'active' || !account ? 'Active' : account.status}
           </span>
         </div>
+
         <div className="strip-item">
           <span className="strip-label">Signed-In Email</span>
           <span className="strip-value mono">{account?.email ?? user?.email ?? '—'}</span>
         </div>
+
         <div className="strip-item">
           <span className="strip-label">Password Sign-In</span>
           <span className="strip-value">
@@ -166,89 +176,183 @@ export default function Account() {
             {account?.has_password !== false ? 'Configured' : 'Not set'}
           </span>
         </div>
+
         <div className="strip-item">
           <span className="strip-label">Stored Records</span>
           <span className="strip-value mono">
-            {loading ? '...' : `${counts.plans} plans · ${counts.sessions} sessions · ${counts.activities} runs`}
+            {loading
+              ? '...'
+              : `${counts.plans} plans · ${counts.sessions} sessions · ${counts.activities} runs`}
           </span>
         </div>
       </div>
 
-      <div className="split-workspace">
-        <section className="plan-card" aria-labelledby="pw-heading">
-          <div className="panel-head">
-            <h2 id="pw-heading">Change password</h2>
-            <span className="pill">Session rotation</span>
-          </div>
-          <p className="note">
-            Updating your password immediately revokes refresh tokens on any other signed-in browsers while keeping this session active.
-          </p>
+      <div className="account-grid">
+        <div className="account-left-column">
+          <section className="plan-card" aria-labelledby="pw-heading">
+            <div className="panel-head">
+              <h2 id="pw-heading">Change password</h2>
+              <span className="pill">Session rotation</span>
+            </div>
 
-          {pwSuccess && <p className="success" role="status">{pwSuccess}</p>}
+            <p className="note">
+              Updating your password immediately revokes refresh tokens on any other signed-in browsers while keeping this session active.
+            </p>
 
-          <form className="form" onSubmit={handleChangePassword} noValidate>
-            <Field id="current-password" label="Current password" error={pwFields.current_password}>
-              <div className="pw-wrap">
-                <input
-                  id="current-password"
-                  type={showPw ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  aria-invalid={Boolean(pwFields.current_password)}
-                  required
-                />
-                <button
-                  type="button"
-                  className="pw-toggle"
-                  onClick={() => setShowPw((s) => !s)}
+            {pwSuccess && <p className="success" role="status">{pwSuccess}</p>}
+
+            <form className="form" onSubmit={handleChangePassword} noValidate>
+              <Field
+                id="current-password"
+                label="Current password"
+                error={pwFields.current_password}
+              >
+                <div className="pw-wrap">
+                  <input
+                    id="current-password"
+                    type={showPw ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    aria-invalid={Boolean(pwFields.current_password)}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="pw-toggle"
+                    onClick={() => setShowPw((shown) => !shown)}
+                  >
+                    {showPw ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+              </Field>
+
+              <div className="form-grid-2">
+                <Field
+                  id="new-password"
+                  label="New password"
+                  hint="8 to 72 characters"
+                  error={pwFields.new_password}
                 >
-                  {showPw ? 'Hide' : 'Show'}
+                  <input
+                    id="new-password"
+                    type={showPw ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    aria-invalid={Boolean(pwFields.new_password)}
+                    required
+                  />
+                </Field>
+
+                <Field
+                  id="confirm-new-password"
+                  label="Confirm new password"
+                  error={pwFields.confirm_new_password}
+                >
+                  <input
+                    id="confirm-new-password"
+                    type={showPw ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    aria-invalid={Boolean(pwFields.confirm_new_password)}
+                    required
+                  />
+                </Field>
+              </div>
+
+              {pwError && <p className="error" role="alert">{pwError}</p>}
+
+              <div className="btn-row">
+                <button type="submit" disabled={pwBusy}>
+                  {pwBusy ? 'Updating...' : 'Update password'}
                 </button>
               </div>
-            </Field>
+            </form>
+          </section>
 
-            <div className="form-grid-2">
-              <Field id="new-password" label="New password" hint="8 to 72 characters" error={pwFields.new_password}>
+          <section
+            className="plan-card account-danger-card"
+            aria-labelledby="danger-heading"
+          >
+            <div className="panel-head">
+              <h2 id="danger-heading">Delete account &amp; training data</h2>
+              <span className="pill pill-danger">Permanent</span>
+            </div>
+
+            <p className="note">
+              Permanently deletes your RunPlan login, runner profile, {counts.plans} training plan(s), {counts.sessions} scheduled session(s), and {counts.activities} logged manual run(s). Only an irreversible non-PII SHA-256 deletion receipt is kept for audit compliance.
+            </p>
+
+            <form className="form" onSubmit={handleOpenDeleteConfirm} noValidate>
+              <div className="form-grid-2">
+                <Field
+                  id="del-password"
+                  label="Current password"
+                  error={delFields.password}
+                >
+                  <input
+                    id="del-password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={delPassword}
+                    onChange={(e) => setDelPassword(e.target.value)}
+                    aria-invalid={Boolean(delFields.password)}
+                    required
+                  />
+                </Field>
+
+                <Field
+                  id="del-confirm"
+                  label="Type DELETE to confirm"
+                  error={delFields.confirm_text}
+                >
+                  <input
+                    id="del-confirm"
+                    type="text"
+                    className="mono"
+                    placeholder="DELETE"
+                    value={delConfirmText}
+                    onChange={(e) => setDelConfirmText(e.target.value)}
+                    aria-invalid={Boolean(delFields.confirm_text)}
+                    required
+                  />
+                </Field>
+              </div>
+
+              <Field
+                id="del-reason"
+                label="Reason (optional)"
+                hint="Max 255 characters"
+              >
                 <input
-                  id="new-password"
-                  type={showPw ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  aria-invalid={Boolean(pwFields.new_password)}
-                  required
+                  id="del-reason"
+                  type="text"
+                  maxLength={255}
+                  placeholder="e.g., Finished marathon training cycle"
+                  value={delReason}
+                  onChange={(e) => setDelReason(e.target.value)}
                 />
               </Field>
 
-              <Field id="confirm-new-password" label="Confirm new password" error={pwFields.confirm_new_password}>
-                <input
-                  id="confirm-new-password"
-                  type={showPw ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  value={confirmNewPassword}
-                  onChange={(e) => setConfirmNewPassword(e.target.value)}
-                  aria-invalid={Boolean(pwFields.confirm_new_password)}
-                  required
-                />
-              </Field>
-            </div>
+              {delError && <p className="error" role="alert">{delError}</p>}
 
-            {pwError && <p className="error" role="alert">{pwError}</p>}
+              <div className="btn-row">
+                <button type="submit" className="btn btn-danger" disabled={delBusy}>
+                  Permanently delete account
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
 
-            <div className="btn-row">
-              <button type="submit" disabled={pwBusy}>
-                {pwBusy ? 'Updating...' : 'Update password'}
-              </button>
-            </div>
-          </form>
-        </section>
-
-        <section className="plan-card" aria-labelledby="events-heading">
+        <section className="plan-card account-events-card" aria-labelledby="events-heading">
           <div className="panel-head">
             <h2 id="events-heading">Recent security activity</h2>
             <span className="pill pill-muted">Audit log</span>
           </div>
+
           <p className="note">
             Privacy-safe events recorded for your account (passwords and tokens are never logged).
           </p>
@@ -268,7 +372,11 @@ export default function Account() {
                 </thead>
                 <tbody>
                   {events.map((ev) => {
-                    const meta = EVENT_LABELS[ev.event_type] ?? { label: ev.event_type, pill: 'pill-muted' }
+                    const meta = EVENT_LABELS[ev.event_type] ?? {
+                      label: ev.event_type,
+                      pill: 'pill-muted',
+                    }
+
                     return (
                       <tr key={ev.id}>
                         <td>
@@ -284,68 +392,6 @@ export default function Account() {
           )}
         </section>
       </div>
-
-      <section
-        className="plan-card"
-        aria-labelledby="danger-heading"
-        style={{ marginTop: '18px', borderColor: 'var(--danger-border)' }}
-      >
-        <div className="panel-head">
-          <h2 id="danger-heading">Delete account &amp; training data</h2>
-          <span className="pill pill-danger">Permanent</span>
-        </div>
-        <p className="note">
-          Permanently deletes your RunPlan login, runner profile, {counts.plans} training plan(s), {counts.sessions} scheduled session(s), and {counts.activities} logged manual run(s). Only an irreversible non-PII SHA-256 deletion receipt is kept for audit compliance.
-        </p>
-
-        <form className="form" onSubmit={handleOpenDeleteConfirm} noValidate>
-          <div className="form-grid-2">
-            <Field id="del-password" label="Current password" error={delFields.password}>
-              <input
-                id="del-password"
-                type="password"
-                autoComplete="current-password"
-                value={delPassword}
-                onChange={(e) => setDelPassword(e.target.value)}
-                aria-invalid={Boolean(delFields.password)}
-                required
-              />
-            </Field>
-
-            <Field id="del-confirm" label="Type DELETE to confirm" error={delFields.confirm_text}>
-              <input
-                id="del-confirm"
-                type="text"
-                className="mono"
-                placeholder="DELETE"
-                value={delConfirmText}
-                onChange={(e) => setDelConfirmText(e.target.value)}
-                aria-invalid={Boolean(delFields.confirm_text)}
-                required
-              />
-            </Field>
-          </div>
-
-          <Field id="del-reason" label="Reason (optional)" hint="Max 255 characters">
-            <input
-              id="del-reason"
-              type="text"
-              maxLength={255}
-              placeholder="e.g., Finished marathon training cycle"
-              value={delReason}
-              onChange={(e) => setDelReason(e.target.value)}
-            />
-          </Field>
-
-          {delError && <p className="error" role="alert">{delError}</p>}
-
-          <div className="btn-row">
-            <button type="submit" className="btn btn-danger" disabled={delBusy}>
-              Permanently delete account
-            </button>
-          </div>
-        </form>
-      </section>
 
       <ConfirmDialog
         open={delDialogOpen}

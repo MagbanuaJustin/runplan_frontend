@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { apiPost } from '../api.js'
 import { useAuth } from '../auth/AuthContext.jsx'
+import useRecaptcha from '../auth/useRecaptcha.js'
 import { BrandLogo, ThemeToggle } from '../components/Layout.jsx'
 import Field from '../components/Field.jsx'
 
 export default function ResetPassword() {
   const { status } = useAuth()
+  const recaptcha = useRecaptcha()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
 
@@ -45,9 +47,11 @@ export default function ResetPassword() {
 
     setBusy(true)
     try {
+      const recaptchaToken = recaptcha.getToken()
       const body = await apiPost('/auth/reset-password', {
         token: token.trim(),
         password,
+        recaptcha_token: recaptchaToken,
       })
       navigate('/login', {
         replace: true,
@@ -57,6 +61,7 @@ export default function ResetPassword() {
       if (err.fields) setFields(err.fields)
       else setError(err.message)
     } finally {
+      recaptcha.reset()
       setBusy(false)
     }
   }
@@ -149,6 +154,20 @@ export default function ResetPassword() {
               />
             </Field>
 
+            <div className="field recaptcha-field">
+              <label>Human verification</label>
+              <div className="recaptcha-widget" ref={recaptcha.containerRef} />
+              {recaptcha.error ? (
+                <p className="error" role="alert">{recaptcha.error}</p>
+              ) : !recaptcha.ready ? (
+                <small role="status">Loading secure verification…</small>
+              ) : recaptcha.verified ? (
+                <small className="recaptcha-success" role="status">Verification complete.</small>
+              ) : (
+                <small role="status">Complete the checkbox to continue.</small>
+              )}
+            </div>
+
             {error && (
               <div>
                 <p className="error" role="alert">{error}</p>
@@ -158,9 +177,16 @@ export default function ResetPassword() {
               </div>
             )}
 
-            <button type="submit" disabled={busy}>
+            <button type="submit" disabled={busy || !recaptcha.verified}>
               {busy ? 'Updating password...' : 'Save new password'}
             </button>
+            <div className="recaptcha-disclosure">
+              <small>
+                This site is protected by reCAPTCHA and the Google{' '}
+                <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>{' '}
+                and <a href="https://policies.google.com/terms" target="_blank" rel="noreferrer">Terms of Service</a> apply.
+              </small>
+            </div>
           </form>
 
           <p className="auth-footer">

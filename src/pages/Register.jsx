@@ -1,12 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { apiPost } from '../api.js'
 import { useAuth } from '../auth/AuthContext.jsx'
+import useRecaptcha from '../auth/useRecaptcha.js'
 import { BrandLogo, ThemeToggle } from '../components/Layout.jsx'
 
+const GOOGLE_SCRIPT_SRC = 'https://accounts.google.com/gsi/client'
+
 export default function Register() {
-  const { status, login } = useAuth()
+  const { status, loginWithGoogle } = useAuth()
   const navigate = useNavigate()
+
+  const googleButtonRef = useRef(null)
+  const googleCallbackRef = useRef(null)
+  const recaptcha = useRecaptcha()
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -15,9 +23,91 @@ export default function Register() {
   const [formError, setFormError] = useState('')
   const [busy, setBusy] = useState(false)
 
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+
   useEffect(() => {
-    document.documentElement.dataset.theme = localStorage.getItem('rp_theme') || 'dark'
+    document.documentElement.dataset.theme =
+      localStorage.getItem('rp_theme') || 'dark'
   }, [])
+
+  useEffect(() => {
+    if (!googleClientId) return undefined
+
+    let cancelled = false
+    let script = document.querySelector(
+      `script[src="${GOOGLE_SCRIPT_SRC}"]`,
+    )
+
+    const renderGoogleButton = () => {
+      if (cancelled || !googleButtonRef.current || !window.google?.accounts?.id) {
+        return
+      }
+
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: (response) => googleCallbackRef.current?.(response),
+      })
+
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        theme: 'outline',
+        size: 'large',
+        text: 'signup_with',
+        shape: 'rectangular',
+        width: 280,
+      })
+    }
+
+    const handleScriptError = () => {
+      if (!cancelled) {
+        setFormError('Google sign-up could not load. Please use email and password.')
+      }
+    }
+
+    if (window.google?.accounts?.id) {
+      renderGoogleButton()
+    } else {
+      if (!script) {
+        script = document.createElement('script')
+        script.src = GOOGLE_SCRIPT_SRC
+        script.async = true
+        script.defer = true
+        document.head.appendChild(script)
+      }
+
+      script.addEventListener('load', renderGoogleButton)
+      script.addEventListener('error', handleScriptError)
+    }
+
+    return () => {
+      cancelled = true
+      script?.removeEventListener('load', renderGoogleButton)
+      script?.removeEventListener('error', handleScriptError)
+    }
+  }, [googleClientId])
+
+  googleCallbackRef.current = async (response) => {
+    if (busy) return
+
+    if (!response?.credential) {
+      setFormError('Google did not return a sign-in credential. Please try again.')
+      return
+    }
+
+    setFormError('')
+    setBusy(true)
+
+    let recaptchaToken = ''
+    try {
+      recaptchaToken = recaptcha.getToken()
+      await loginWithGoogle(response.credential, recaptchaToken)
+      navigate('/dashboard', { replace: true })
+    } catch (err) {
+      setFormError(err.message || 'Google sign-up failed. Please try again.')
+    } finally {
+      if (recaptchaToken) recaptcha.reset()
+      setBusy(false)
+    }
+  }
 
   if (status === 'in') return <Navigate to="/dashboard" replace />
 
@@ -37,19 +127,26 @@ export default function Register() {
 
     setErrors({})
     setBusy(true)
+
     try {
-      await apiPost('/auth/register', { email, password })
-      try {
-        await login(email, password)
-        navigate('/dashboard', { replace: true })
-      } catch {
-        navigate('/login', { replace: true })
-      }
+      const recaptchaToken = recaptcha.getToken()
+
+      await apiPost('/auth/register', {
+        email,
+        password,
+        recaptcha_token: recaptchaToken,
+      })
+
+      navigate('/login', {
+        replace: true,
+        state: { notice: 'Your account was created. Sign in to continue.' },
+      })
     } catch (err) {
       if (err.fields) setErrors(err.fields)
       else if (err.status === 409) setErrors({ email: err.message })
-      else setFormError(err.message)
+      else setFormError(err.message || 'Account creation failed. Please try again.')
     } finally {
+      recaptcha.reset()
       setBusy(false)
     }
   }
@@ -70,7 +167,12 @@ export default function Register() {
             Set your experience level, target distance, and preferred training days.
             RunPlan structures weekly mileage safely and adapts as you log runs.
           </p>
-          <svg className="auth-sparkline" viewBox="0 0 340 46" fill="none" aria-hidden="true">
+          <svg
+            className="auth-sparkline"
+            viewBox="0 0 340 46"
+            fill="none"
+            aria-hidden="true"
+          >
             <polyline
               points="4,36 52,32 96,26 140,30 186,18 232,22 282,10 336,14"
               stroke="currentColor"
@@ -91,7 +193,9 @@ export default function Register() {
 
         <div className="auth-card">
           <h1>Create account</h1>
-          <p className="auth-subtitle">Start planning your training schedule in under a minute.</p>
+          <p className="auth-subtitle">
+            Start planning your training schedule in under a minute.
+          </p>
 
           <form className="form" onSubmit={handleSubmit} noValidate>
             <div className="field">
@@ -104,7 +208,11 @@ export default function Register() {
                 onChange={(e) => setEmail(e.target.value)}
                 {...invalid('email', 'reg-email')}
               />
-              {errors.email && <p id="reg-email-error" className="error" role="alert">{errors.email}</p>}
+              {errors.email && (
+                <p id="reg-email-error" className="error" role="alert">
+                  {errors.email}
+                </p>
+              )}
             </div>
 
             <div className="field">
@@ -116,7 +224,9 @@ export default function Register() {
                   autoComplete="new-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  aria-describedby={errors.password ? 'reg-password-error' : 'reg-password-hint'}
+                  aria-describedby={
+                    errors.password ? 'reg-password-error' : 'reg-password-hint'
+                  }
                   aria-invalid={errors.password ? 'true' : undefined}
                 />
                 <button
@@ -129,7 +239,11 @@ export default function Register() {
                 </button>
               </div>
               <small id="reg-password-hint">Use at least 8 characters.</small>
-              {errors.password && <p id="reg-password-error" className="error" role="alert">{errors.password}</p>}
+              {errors.password && (
+                <p id="reg-password-error" className="error" role="alert">
+                  {errors.password}
+                </p>
+              )}
             </div>
 
             <div className="field">
@@ -142,12 +256,81 @@ export default function Register() {
                 onChange={(e) => setConfirm(e.target.value)}
                 {...invalid('confirm', 'reg-confirm')}
               />
-              {errors.confirm && <p id="reg-confirm-error" className="error" role="alert">{errors.confirm}</p>}
+              {errors.confirm && (
+                <p id="reg-confirm-error" className="error" role="alert">
+                  {errors.confirm}
+                </p>
+              )}
             </div>
 
-            {formError && <p className="error" role="alert">{formError}</p>}
-            <button type="submit" disabled={busy}>{busy ? 'Creating account...' : 'Create account'}</button>
+            <div className="field recaptcha-field">
+              <label>Human verification</label>
+              <div className="recaptcha-widget" ref={recaptcha.containerRef} />
+              {recaptcha.error ? (
+                <p className="error" role="alert">{recaptcha.error}</p>
+              ) : (
+                <small role="status">
+                  {!recaptcha.ready
+                    ? 'Loading secure verification…'
+                    : recaptcha.verified
+                      ? 'Verification complete.'
+                      : recaptcha.enabled
+                        ? 'Complete the checkbox to continue.'
+                        : 'Human verification is turned off (development).'}
+                </small>
+              )}
+            </div>
+
+            {formError && (
+              <p className="error" role="alert">
+                {formError}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={busy || !recaptcha.verified}
+            >
+              {busy ? 'Creating account...' : 'Create account'}
+            </button>
+            <div className="recaptcha-disclosure">
+              <small>
+                This site is protected by reCAPTCHA and the Google{' '}
+                <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>{' '}
+                and <a href="https://policies.google.com/terms" target="_blank" rel="noreferrer">Terms of Service</a> apply.
+              </small>
+            </div>
           </form>
+
+          <div className="auth-divider" role="separator">
+            <span>Or continue with</span>
+          </div>
+
+          {googleClientId ? (
+            <div
+              ref={googleButtonRef}
+              aria-label="Sign up with Google"
+              aria-busy={busy}
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                minHeight: '44px',
+                pointerEvents: busy || !recaptcha.verified ? 'none' : undefined,
+                opacity: busy || !recaptcha.verified ? 0.6 : 1,
+              }}
+            />
+          ) : (
+            <p className="error" role="status">
+              Google sign-up is not configured. You can create an account with
+              email and password.
+            </p>
+          )}
+
+          {busy && (
+            <p className="auth-subtitle" role="status">
+              Creating your account...
+            </p>
+          )}
 
           <p className="auth-footer">
             Already have an account? <Link to="/login">Sign in</Link>
@@ -157,3 +340,4 @@ export default function Register() {
     </div>
   )
 }
+

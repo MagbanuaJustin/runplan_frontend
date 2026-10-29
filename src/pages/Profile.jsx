@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { apiGet, apiPut } from '../api.js'
+import { apiGet, apiPost, apiPut } from '../api.js'
 import Field from '../components/Field.jsx'
 
 const EXPERIENCE = [['beginner', 'Beginner'], ['intermediate', 'Intermediate'], ['advanced', 'Advanced']]
@@ -34,6 +34,14 @@ const empty = {
 }
 
 const numToText = (value) => (value === null || value === undefined ? '' : String(value))
+const browserTimezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Manila'
+
+function applicationServerKey(value) {
+  const base64 = String(value).replace(/-/g, '+').replace(/_/g, '/')
+  const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')
+  const raw = atob(padded)
+  return Uint8Array.from(raw, (char) => char.charCodeAt(0))
+}
 
 function fromApi(p) {
   return {
@@ -69,6 +77,12 @@ export default function Profile() {
   const [formError, setFormError] = useState('')
   const [saved, setSaved] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [reminders, setReminders] = useState({
+    enabled: false, lead_minutes: 60, timezone: browserTimezone(),
+    subscribed: false, push_ready: false, public_key: null,
+  })
+  const [remindersBusy, setRemindersBusy] = useState(false)
+  const [remindersMessage, setRemindersMessage] = useState('')
 
   useEffect(() => {
     apiGet('/profile')
@@ -77,6 +91,13 @@ export default function Profile() {
         setState('ready')
       })
       .catch(() => setState('error'))
+  }, [])
+
+  useEffect(() => {
+    const timezone = browserTimezone()
+    apiGet(`/notifications/preferences?timezone=${encodeURIComponent(timezone)}`)
+      .then((body) => setReminders((current) => ({ ...current, ...body.data })))
+      .catch((err) => setRemindersMessage(err.message))
   }, [])
 
   const change = (patch) => {
@@ -153,6 +174,71 @@ export default function Profile() {
       else setFormError(err.message)
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function saveReminderSettings(e) {
+    e.preventDefault()
+    setRemindersMessage('')
+    setRemindersBusy(true)
+    try {
+      const timezone = browserTimezone()
+      if (reminders.enabled) {
+        if (!reminders.push_ready || !reminders.public_key) {
+          throw new Error('Push reminders are not configured on the API server yet.')
+        }
+        if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+          throw new Error('This browser does not support push notifications. Try a current desktop or mobile browser.')
+        }
+
+        const registration = await navigator.serviceWorker.register('/sw.js')
+        await navigator.serviceWorker.ready
+        let subscription = await registration.pushManager.getSubscription()
+        if (Notification.permission !== 'granted') {
+          const permission = await Notification.requestPermission()
+          if (permission !== 'granted') throw new Error('Allow notifications in your browser to receive run reminders.')
+        }
+        if (!subscription) {
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: applicationServerKey(reminders.public_key),
+          })
+        }
+        await apiPost('/notifications/subscriptions', subscription.toJSON())
+      }
+
+      const body = await apiPut('/notifications/preferences', {
+        enabled: reminders.enabled,
+        lead_minutes: Number(reminders.lead_minutes),
+        timezone,
+      })
+      setReminders((current) => ({ ...current, ...body.data }))
+      setRemindersMessage(reminders.enabled
+        ? `Run reminders are on for this device, ${reminders.lead_minutes} minutes before each run.`
+        : 'Run reminders are off.')
+    } catch (err) {
+      setRemindersMessage(err.message)
+    } finally {
+      setRemindersBusy(false)
+    }
+  }
+
+  async function turnOffReminders() {
+    setRemindersBusy(true)
+    setRemindersMessage('')
+    try {
+      const registration = await navigator.serviceWorker?.getRegistration('/')
+      const subscription = await registration?.pushManager?.getSubscription()
+      if (subscription) {
+        await apiPost('/notifications/subscriptions/remove', { endpoint: subscription.endpoint })
+        await subscription.unsubscribe()
+      }
+      setReminders((current) => ({ ...current, subscribed: false }))
+      setRemindersMessage('This device is unsubscribed. Other subscribed devices can still receive reminders.')
+    } catch (err) {
+      setRemindersMessage(err.message)
+    } finally {
+      setRemindersBusy(false)
     }
   }
 
@@ -351,6 +437,51 @@ export default function Profile() {
 
           <div className="btn-row">
             <button type="submit" disabled={busy}>{busy ? 'Saving...' : 'Save profile'}</button>
+          </div>
+        </form>
+      </section>
+
+      <section className="plan-card" style={{ maxWidth: 820, marginTop: 18 }} aria-labelledby="run-reminders-title">
+        <div className="panel-head">
+          <h2 id="run-reminders-title">Upcoming run reminders</h2>
+          <span className={`pill ${reminders.enabled && reminders.subscribed ? 'pill-ok' : 'pill-muted'}`}>
+            {reminders.enabled && reminders.subscribed ? 'Enabled on this device' : 'Optional'}
+          </span>
+        </div>
+        <p className="note">
+          Get a browser notification before each planned run. Run times use your preferred time above and your device timezone ({browserTimezone()}).
+          Reminders go to this browser/device, not to your login email.
+        </p>
+        <form className="form" onSubmit={saveReminderSettings}>
+          <label className="day" style={{ display: 'inline-flex', width: 'fit-content' }}>
+            <input
+              type="checkbox"
+              checked={Boolean(reminders.enabled)}
+              onChange={(e) => setReminders((current) => ({ ...current, enabled: e.target.checked }))}
+            />
+            Enable run reminders on this device
+          </label>
+          <Field id="reminder-lead" label="Remind me">
+            <select
+              id="reminder-lead"
+              value={String(reminders.lead_minutes)}
+              onChange={(e) => setReminders((current) => ({ ...current, lead_minutes: Number(e.target.value) }))}
+            >
+              <option value="30">30 minutes before</option>
+              <option value="60">1 hour before</option>
+            </select>
+          </Field>
+          {remindersMessage && <p className={remindersMessage.includes('are on') || remindersMessage.includes('are off') || remindersMessage.includes('unsubscribed') ? 'success' : 'error'} role="status">{remindersMessage}</p>}
+          {!reminders.push_ready && <p className="note">The server administrator must configure Web Push before reminders can be enabled.</p>}
+          <div className="btn-row">
+            <button type="submit" disabled={remindersBusy}>
+              {remindersBusy ? 'Saving...' : 'Save reminder settings'}
+            </button>
+            {reminders.subscribed && (
+              <button type="button" className="secondary-btn" disabled={remindersBusy} onClick={turnOffReminders}>
+                Turn off on this device
+              </button>
+            )}
           </div>
         </form>
       </section>

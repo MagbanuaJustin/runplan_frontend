@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiGet, apiPost } from '../api.js'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
+import ManualPlanForm from '../components/ManualPlanForm.jsx'
 import { TYPE_LABELS, formatDate, formatDuration, weeklySummary } from '../format.js'
 
 const GOALS = {
@@ -19,7 +20,9 @@ function formatTimestamp(ts) {
   if (!ts) return ''
   const iso = ts.includes('T') ? ts : ts.replace(' ', 'T') + 'Z'
   const d = new Date(iso)
-  return Number.isNaN(d.getTime()) ? ts : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+  return Number.isNaN(d.getTime())
+    ? ts
+    : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 function formatStartTime(hhmmss) {
@@ -33,16 +36,62 @@ function formatStartTime(hhmmss) {
   return `${h12}:${String(m).padStart(2, '0')} ${suffix}`
 }
 
+function SessionPreview({ sessions, title }) {
+  if (!Array.isArray(sessions) || sessions.length === 0) return null
+
+  return (
+    <details className="weeks">
+      <summary>{title} ({sessions.length} sessions)</summary>
+      <div className="table-wrap">
+        <table>
+          <caption className="sr-only">{title}</caption>
+          <thead>
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col">Time</th>
+              <th scope="col">Workout</th>
+              <th scope="col">Distance</th>
+              <th scope="col">Est. Duration</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sessions.map((session, index) => (
+              <tr key={session.id ?? `${session.scheduled_date}-${index}`}>
+                <td className="mono">{formatDate(session.scheduled_date)}</td>
+                <td className="mono">{formatStartTime(session.planned_start_time)}</td>
+                <td>{TYPE_LABELS[session.type] ?? session.type ?? 'Workout'}</td>
+                <td className="mono">
+                  {session.planned_distance_km != null
+                    ? `${session.planned_distance_km} km`
+                    : '—'}
+                </td>
+                <td className="mono">
+                  {session.planned_duration_seconds != null
+                    ? formatDuration(session.planned_duration_seconds)
+                    : '—'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  )
+}
+
 function PlanSummary({ data }) {
   const { plan, sessions } = data
   const weeks = weeklySummary(sessions, plan.start_date)
-  const totalKm = sessions.reduce((sum, s) => sum + (s.planned_distance_km ?? 0), 0)
+  const totalKm = sessions.reduce((sum, session) => sum + (session.planned_distance_km ?? 0), 0)
 
   return (
     <>
       <dl className="stats">
         <div><dt>Goal</dt><dd>{GOALS[plan.goal] ?? plan.goal}</dd></div>
-        <div><dt>Schedule Window</dt><dd>{formatDate(plan.start_date)} &ndash; {formatDate(plan.end_date)}</dd></div>
+        <div>
+          <dt>Schedule Window</dt>
+          <dd>{formatDate(plan.start_date)} &ndash; {formatDate(plan.end_date)}</dd>
+        </div>
         <div><dt>Length</dt><dd>{weeks.length} weeks</dd></div>
         <div><dt>Runs / Week</dt><dd>{plan.sessions_per_week}</dd></div>
         <div><dt>Total Volume</dt><dd>{Math.round(totalKm)} km</dd></div>
@@ -63,13 +112,15 @@ function PlanSummary({ data }) {
               </tr>
             </thead>
             <tbody>
-              {weeks.map((w) => (
-                <tr key={w.week}>
-                  <th scope="row" className="mono">W{w.week}</th>
-                  <td className="mono">{formatDate(w.starts)}</td>
-                  <td className="mono">{w.runs}</td>
-                  <td className="mono">{w.km.toFixed(1)} km</td>
-                  <td className="mono">{w.race ? 'Race week' : w.long !== null ? `${w.long} km` : '—'}</td>
+              {weeks.map((week) => (
+                <tr key={week.week}>
+                  <th scope="row" className="mono">W{week.week}</th>
+                  <td className="mono">{formatDate(week.starts)}</td>
+                  <td className="mono">{week.runs}</td>
+                  <td className="mono">{week.km.toFixed(1)} km</td>
+                  <td className="mono">
+                    {week.race ? 'Race week' : week.long !== null ? `${week.long} km` : '—'}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -93,12 +144,14 @@ export default function Plan() {
   const [confirming, setConfirming] = useState(false)
   const [proposing, setProposing] = useState(false)
   const [proposalReason, setProposalReason] = useState('')
+  const [manualFormOpen, setManualFormOpen] = useState(false)
 
   async function loadRevisions(planId) {
     if (!planId) {
       setRevisions([])
       return
     }
+
     try {
       const rev = await apiGet(`/plans/${planId}/revisions`)
       setRevisions(Array.isArray(rev.data) ? rev.data : [])
@@ -123,15 +176,22 @@ export default function Plan() {
     setBusy(true)
     setError(null)
     setNotice('')
+
     try {
       const body = await apiPost('/plans/generate')
       const result = body.data
+
       if (!result?.plan || !Array.isArray(result.sessions)) {
         throw new Error('The server returned an incomplete plan. Please try again.')
       }
-      setPlans((p) => ({ ...p, draft: { plan: result.plan, sessions: result.sessions } }))
+
+      setPlans((current) => ({
+        ...current,
+        draft: { plan: result.plan, sessions: result.sessions },
+      }))
       setWarnings(result.warnings ?? [])
       setDraftBrief(result.ai_brief ?? null)
+      setManualFormOpen(false)
     } catch (err) {
       setError({ message: err.message, fields: err.fields })
     } finally {
@@ -139,10 +199,25 @@ export default function Plan() {
     }
   }
 
+  function handleManualSaved(result) {
+    if (!result?.plan || !Array.isArray(result.sessions)) {
+      setError({ message: 'The server returned an incomplete manual plan.' })
+      return
+    }
+
+    setPlans((current) => ({ ...current, draft: result }))
+    setWarnings([])
+    setDraftBrief(null)
+    setManualFormOpen(false)
+    setError(null)
+    setNotice('Manual draft saved. Review the schedule below, then approve it to activate.')
+  }
+
   async function approve() {
     setBusy(true)
     setError(null)
     setNotice('')
+
     try {
       const body = await apiPost(`/plans/${plans.draft.plan.id}/approve`)
       setPlans({ active: body.data, draft: null })
@@ -164,13 +239,15 @@ export default function Plan() {
   async function discardDraft() {
     const draftId = plans.draft?.plan?.id
     if (!draftId) return
+
     setBusy(true)
     setError(null)
     setNotice('')
+
     try {
       await apiPost(`/plans/${draftId}/discard`)
       const hadActive = Boolean(plans.active)
-      setPlans((p) => ({ ...p, draft: null }))
+      setPlans((current) => ({ ...current, draft: null }))
       setWarnings([])
       setDraftBrief(null)
       setNotice(
@@ -185,20 +262,25 @@ export default function Plan() {
     }
   }
 
-  async function handlePropose(e) {
-    e.preventDefault()
+  async function handlePropose(event) {
+    event.preventDefault()
     const planId = plans.active?.plan?.id
     if (!planId) return
+
     setBusy(true)
     setError(null)
     setNotice('')
+
     try {
       const body = await apiPost(`/plans/${planId}/revisions/propose`, {
         reason: proposalReason.trim() || null,
       })
-      setPlans((p) => ({
-        ...p,
-        active: p.active ? { ...p.active, pending_revision: body.data } : p.active,
+
+      setPlans((current) => ({
+        ...current,
+        active: current.active
+          ? { ...current.active, pending_revision: body.data }
+          : current.active,
       }))
       setProposing(false)
       setProposalReason('')
@@ -213,20 +295,29 @@ export default function Plan() {
 
   async function handleApplyProposal() {
     const planId = plans.active?.plan?.id
-    const revId = plans.active?.pending_revision?.id
-    if (!planId || !revId) return
+    const revisionId = plans.active?.pending_revision?.id
+    if (!planId || !revisionId) return
+
     setBusy(true)
     setError(null)
     setNotice('')
+
     try {
-      const body = await apiPost(`/plans/${planId}/revisions/${revId}/apply`)
+      const body = await apiPost(`/plans/${planId}/revisions/${revisionId}/apply`)
       const result = body.data
-      setPlans((p) => ({
-        ...p,
-        active: { plan: result.plan, sessions: result.sessions, pending_revision: null },
+
+      setPlans((current) => ({
+        ...current,
+        active: {
+          plan: result.plan,
+          sessions: result.sessions,
+          pending_revision: null,
+        },
       }))
       setActiveWarnings(result.warnings ?? [])
-      setNotice(`Revision applied — active plan updated to v${result.plan.version ?? 1}. Completed runs were preserved.`)
+      setNotice(
+        `Revision applied — active plan updated to v${result.plan.version ?? 1}. Completed runs were preserved.`,
+      )
       await loadRevisions(planId)
     } catch (err) {
       setError({ message: err.message, fields: err.fields })
@@ -237,16 +328,20 @@ export default function Plan() {
 
   async function handleRejectProposal() {
     const planId = plans.active?.plan?.id
-    const revId = plans.active?.pending_revision?.id
-    if (!planId || !revId) return
+    const revisionId = plans.active?.pending_revision?.id
+    if (!planId || !revisionId) return
+
     setBusy(true)
     setError(null)
     setNotice('')
+
     try {
-      await apiPost(`/plans/${planId}/revisions/${revId}/reject`)
-      setPlans((p) => ({
-        ...p,
-        active: p.active ? { ...p.active, pending_revision: null } : p.active,
+      await apiPost(`/plans/${planId}/revisions/${revisionId}/reject`)
+      setPlans((current) => ({
+        ...current,
+        active: current.active
+          ? { ...current.active, pending_revision: null }
+          : current.active,
       }))
       setNotice('Revision proposal cancelled. Your active training schedule is unchanged.')
       await loadRevisions(planId)
@@ -277,9 +372,15 @@ export default function Plan() {
       {error && (
         <div className="error" role="alert" style={{ marginBottom: 14 }}>
           {error.fields?.profile ? (
-            <p>Complete your runner profile first. <Link to="/profile">Open Runner Profile &rarr;</Link></p>
+            <p>
+              Complete your runner profile first.{' '}
+              <Link to="/profile">Open Runner Profile &rarr;</Link>
+            </p>
           ) : error.fields?.target_race_date ? (
-            <p>{error.fields.target_race_date} <Link to="/profile">Update race date &rarr;</Link></p>
+            <p>
+              {error.fields.target_race_date}{' '}
+              <Link to="/profile">Update race date &rarr;</Link>
+            </p>
           ) : error.fields?.reason ? (
             <p>{error.fields.reason}</p>
           ) : (
@@ -288,24 +389,59 @@ export default function Plan() {
         </div>
       )}
 
+      {manualFormOpen && !draft && (
+        <section aria-labelledby="manual-plan-title">
+          <div className="panel-head">
+            <h2 id="manual-plan-title">Create a manual training plan</h2>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setManualFormOpen(false)}
+            >
+              Cancel
+            </button>
+          </div>
+          <ManualPlanForm onSaved={handleManualSaved} />
+        </section>
+      )}
+
       {draft && (
         <section className="plan-card" aria-labelledby="draft-title">
           <div className="panel-head">
-            <h2 id="draft-title">Proposed draft schedule</h2>
-            <span className="pill pill-warn">Pending approval</span>
+            <h2 id="draft-title">
+              {draft.plan.creation_mode === 'manual'
+                ? 'Manual draft schedule'
+                : 'Proposed draft schedule'}
+            </h2>
+            <span className="pill pill-warn">
+              {draft.plan.creation_mode === 'manual'
+                ? 'Manual · Pending approval'
+                : 'Pending approval'}
+            </span>
           </div>
+
           {draftBrief?.text && (
             <div className="advisory-banner" style={{ marginBottom: 14 }}>
-              <strong>{draftBrief.provider_status === 'ok' ? 'Claude AI coach:' : 'Coach overview:'}</strong>{' '}
+              <strong>
+                {draftBrief.provider_status === 'ok' ? 'Gemini AI coach:' : 'Coach overview:'}
+              </strong>{' '}
               {draftBrief.text}
             </div>
           )}
+
           <PlanSummary data={draft} />
+
+          <SessionPreview
+            sessions={draft.sessions}
+            title="Review scheduled workouts"
+          />
+
           {warnings.length > 0 && (
             <ul className="warnings">
-              {warnings.map((w) => <li key={w}>{w}</li>)}
+              {warnings.map((warning) => <li key={warning}>{warning}</li>)}
             </ul>
           )}
+
           <div className="btn-row">
             <button
               type="button"
@@ -315,10 +451,24 @@ export default function Plan() {
             >
               {busy ? 'Please wait...' : 'Approve & activate plan'}
             </button>
-            <button type="button" className="btn btn-secondary" disabled={busy} onClick={generate}>
-              Regenerate draft
-            </button>
-            <button type="button" className="btn btn-secondary" disabled={busy} onClick={discardDraft}>
+
+            {draft.plan.creation_mode !== 'manual' && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                disabled={busy}
+                onClick={generate}
+              >
+                Regenerate draft
+              </button>
+            )}
+
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={busy}
+              onClick={discardDraft}
+            >
               Cancel draft
             </button>
           </div>
@@ -329,7 +479,9 @@ export default function Plan() {
         <section className="plan-card" aria-labelledby="proposal-title">
           <div className="panel-head">
             <h2 id="proposal-title">Proposed plan revision preview</h2>
-            <span className="pill pill-warn">Pending review &middot; from v{pendingRevision.previous_version}</span>
+            <span className="pill pill-warn">
+              Pending review &middot; from v{pendingRevision.previous_version}
+            </span>
           </div>
 
           <p className="note">
@@ -348,46 +500,30 @@ export default function Plan() {
 
           {pendingRevision.warnings?.length > 0 && (
             <ul className="warnings">
-              {pendingRevision.warnings.map((w) => <li key={w}>{w}</li>)}
+              {pendingRevision.warnings.map((warning) => <li key={warning}>{warning}</li>)}
             </ul>
           )}
 
-          {pendingRevision.sessions?.length > 0 && (
-            <details className="weeks">
-              <summary>Preview proposed workouts ({pendingRevision.sessions.length} upcoming sessions)</summary>
-              <div className="table-wrap">
-                <table>
-                  <caption className="sr-only">Proposed upcoming training sessions</caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">Date</th>
-                      <th scope="col">Time</th>
-                      <th scope="col">Workout</th>
-                      <th scope="col">Distance</th>
-                      <th scope="col">Est. Duration</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pendingRevision.sessions.map((s) => (
-                      <tr key={s.scheduled_date}>
-                        <td className="mono">{formatDate(s.scheduled_date)}</td>
-                        <td className="mono">{formatStartTime(s.planned_start_time)}</td>
-                        <td>{TYPE_LABELS[s.type] ?? s.type}</td>
-                        <td className="mono">{s.planned_distance_km} km</td>
-                        <td className="mono">{formatDuration(s.planned_duration_seconds)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </details>
-          )}
+          <SessionPreview
+            sessions={pendingRevision.sessions}
+            title="Preview proposed workouts"
+          />
 
           <div className="btn-row">
-            <button type="button" className="btn btn-primary" disabled={busy} onClick={handleApplyProposal}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={busy}
+              onClick={handleApplyProposal}
+            >
               {busy ? 'Applying...' : 'Apply revision'}
             </button>
-            <button type="button" className="btn btn-secondary" disabled={busy} onClick={handleRejectProposal}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={busy}
+              onClick={handleRejectProposal}
+            >
               Cancel proposal
             </button>
           </div>
@@ -398,14 +534,54 @@ export default function Plan() {
         <section className="plan-card" aria-labelledby="active-title">
           <div className="panel-head">
             <h2 id="active-title">Active training plan</h2>
-            <span className="pill pill-ok">{'\u2713'} Active &middot; v{active.plan.version ?? 1}</span>
+            <span className="pill pill-ok">
+              {'\u2713'} Active
+              {active.plan.creation_mode === 'manual' ? ' · Manual' : ''}
+              &middot; v{active.plan.version ?? 1}
+            </span>
+          </div>
+
+          <div className="btn-row" style={{ gap: 12, marginBottom: 18 }}>
+            <Link className="btn btn-secondary" to="/calendar">Open calendar</Link>
+
+            {active.plan.creation_mode !== 'manual' && !pendingRevision && !proposing && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                disabled={busy}
+                onClick={() => setProposing(true)}
+              >
+                Propose plan revision
+              </button>
+            )}
+
+            {!draft && !manualFormOpen && (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={busy}
+                  onClick={generate}
+                >
+                  {busy ? 'Building draft...' : 'Generate new draft'}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  disabled={busy}
+                  onClick={() => setManualFormOpen(true)}
+                >
+                  Create manual draft
+                </button>
+              </>
+            )}
           </div>
 
           <PlanSummary data={active} />
 
           {activeWarnings.length > 0 && (
             <ul className="warnings">
-              {activeWarnings.map((w) => <li key={w}>{w}</li>)}
+              {activeWarnings.map((warning) => <li key={warning}>{warning}</li>)}
             </ul>
           )}
 
@@ -414,7 +590,9 @@ export default function Plan() {
               <summary>Version &amp; revision history ({revisions.length})</summary>
               <div className="table-wrap">
                 <table>
-                  <caption className="sr-only">History of changes and proposals on this training plan</caption>
+                  <caption className="sr-only">
+                    History of changes and proposals on this training plan
+                  </caption>
                   <thead>
                     <tr>
                       <th scope="col">Version</th>
@@ -424,25 +602,28 @@ export default function Plan() {
                     </tr>
                   </thead>
                   <tbody>
-                    {revisions.map((r, idx) => {
-                      const decision = r.decision ?? 'applied'
+                    {revisions.map((revision, index) => {
+                      const decision = revision.decision ?? 'applied'
                       const versionLabel = decision === 'applied'
-                        ? `v${r.resulting_version ?? r.version}`
-                        : `v${r.previous_version ?? r.version}`
+                        ? `v${revision.resulting_version ?? revision.version}`
+                        : `v${revision.previous_version ?? revision.version}`
+
                       return (
-                        <tr key={r.id ?? `${r.version}-${idx}`}>
+                        <tr key={revision.id ?? `${revision.version}-${index}`}>
                           <th scope="row" className="mono">{versionLabel}</th>
                           <td>
                             <span className={`pill ${DECISION_PILL[decision] ?? ''}`}>
                               {decision.charAt(0).toUpperCase() + decision.slice(1)}
                             </span>
                           </td>
-                          <td className="mono">{formatTimestamp(r.decision_timestamp || r.created_at)}</td>
+                          <td className="mono">
+                            {formatTimestamp(revision.decision_timestamp || revision.created_at)}
+                          </td>
                           <td className="wrap-cell">
-                            <div>{r.summary}</div>
-                            {r.reason && (
+                            <div>{revision.summary}</div>
+                            {revision.reason && (
                               <div className="note" style={{ margin: '3px 0 0', fontSize: 12 }}>
-                                Reason: {r.reason}
+                                Reason: {revision.reason}
                               </div>
                             )}
                           </td>
@@ -465,12 +646,14 @@ export default function Plan() {
                   maxLength={255}
                   placeholder="e.g., Adjusted available days or missed runs last week"
                   value={proposalReason}
-                  onChange={(e) => setProposalReason(e.target.value)}
+                  onChange={(event) => setProposalReason(event.target.value)}
                 />
               </label>
+
               <p className="note" style={{ margin: 0 }}>
                 Completed runs stay untouched. You will see a full preview before any workouts change.
               </p>
+
               <div className="btn-row">
                 <button type="submit" className="btn btn-primary" disabled={busy}>
                   {busy ? 'Generating preview...' : 'Preview proposed changes'}
@@ -479,44 +662,42 @@ export default function Plan() {
                   type="button"
                   className="btn btn-secondary"
                   disabled={busy}
-                  onClick={() => { setProposing(false); setProposalReason('') }}
+                  onClick={() => {
+                    setProposing(false)
+                    setProposalReason('')
+                  }}
                 >
                   Cancel
                 </button>
               </div>
             </form>
           )}
-
-          <div className="btn-row">
-            <Link className="btn btn-secondary" to="/calendar">Open calendar</Link>
-            {!pendingRevision && !proposing && (
-              <button
-                type="button"
-                className="btn btn-secondary"
-                disabled={busy}
-                onClick={() => setProposing(true)}
-              >
-                Propose plan revision
-              </button>
-            )}
-            {!draft && (
-              <button type="button" className="btn btn-primary" disabled={busy} onClick={generate}>
-                {busy ? 'Building draft...' : 'Generate new draft'}
-              </button>
-            )}
-          </div>
         </section>
       )}
 
-      {!draft && !active && (
+      {!draft && !active && !manualFormOpen && (
         <section className="plan-card">
           <h2>No training plan yet</h2>
           <p className="note">
-            Generate a deterministic training schedule tailored to your goal, race date, and available days.
+            Generate a deterministic training schedule tailored to your goal, race date, and available days,
+            or enter a complete schedule yourself.
           </p>
           <div className="btn-row">
-            <button type="button" className="btn btn-primary" disabled={busy} onClick={generate}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={busy}
+              onClick={generate}
+            >
               {busy ? 'Building your plan...' : 'Generate my plan'}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={busy}
+              onClick={() => setManualFormOpen(true)}
+            >
+              Create plan manually
             </button>
             <Link className="btn btn-secondary" to="/profile">Review profile</Link>
           </div>

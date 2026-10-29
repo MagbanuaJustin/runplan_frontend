@@ -1,25 +1,25 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { apiGet, apiPost, setAccessToken, setRefreshHandler } from '../api.js'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
-  const [status, setStatus] = useState('loading') // loading | in | out
+  const [status, setStatus] = useState('loading')
   const started = useRef(false)
   const refreshing = useRef(null)
 
-  function startSession(data) {
+  const startSession = useCallback((data) => {
     setAccessToken(data.access_token)
     setUser(data.user)
     setStatus('in')
-  }
+  }, [])
 
-  function endSession() {
+  const endSession = useCallback(() => {
     setAccessToken(null)
     setUser(null)
     setStatus('out')
-  }
+  }, [])
 
   async function refreshUser() {
     const body = await apiGet('/auth/me')
@@ -27,35 +27,59 @@ export function AuthProvider({ children }) {
     return body?.data ?? null
   }
 
-  // Used by api.js when a request gets 401. One shared promise, so parallel
-  // 401s trigger only ONE refresh (the refresh token is single-use).
   useEffect(() => {
     setRefreshHandler(() => {
       if (!refreshing.current) {
         refreshing.current = apiPost('/auth/refresh')
-          .then((body) => { startSession(body.data); return true })
-          .catch(() => { endSession(); return false })
-          .finally(() => { refreshing.current = null })
+          .then((body) => {
+            startSession(body.data)
+            return true
+          })
+          .catch(() => {
+            endSession()
+            return false
+          })
+          .finally(() => {
+            refreshing.current = null
+          })
       }
+
       return refreshing.current
     })
-  }, [])
+  }, [startSession, endSession])
 
   useEffect(() => {
-    if (started.current) return // StrictMode runs effects twice in dev
+    if (started.current) return
     started.current = true
+
     apiPost('/auth/refresh')
       .then((body) => {
         startSession(body.data)
-        return apiGet('/auth/me').then((me) => {
-          if (me?.data) setUser(me.data)
-        }).catch(() => {})
+        return apiGet('/auth/me')
+          .then((me) => {
+            if (me?.data) setUser(me.data)
+          })
+          .catch(() => {})
       })
       .catch(() => setStatus('out'))
-  }, [])
+  }, [startSession])
 
-  async function login(email, password) {
-    const body = await apiPost('/auth/login', { email, password })
+  async function login(email, password, recaptchaToken) {
+    const body = await apiPost('/auth/login', {
+      email,
+      password,
+      recaptcha_token: recaptchaToken,
+    })
+
+    startSession(body.data)
+  }
+
+  async function loginWithGoogle(idToken, recaptchaToken) {
+    const body = await apiPost('/auth/google', {
+      credential: idToken,
+      recaptcha_token: recaptchaToken,
+    })
+
     startSession(body.data)
   }
 
@@ -68,7 +92,17 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, status, login, logout, refreshUser, clearSession: endSession }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        status,
+        login,
+        loginWithGoogle,
+        logout,
+        refreshUser,
+        clearSession: endSession,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )

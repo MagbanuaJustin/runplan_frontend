@@ -7,6 +7,7 @@ import ForgotPassword from './pages/ForgotPassword.jsx'
 import ResetPassword from './pages/ResetPassword.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Activities from './pages/Activities.jsx'
+import Run from './pages/Run.jsx'
 import ComingSoon from './pages/ComingSoon.jsx'
 import Profile from './pages/Profile.jsx'
 import Plan from './pages/Plan.jsx'
@@ -22,17 +23,20 @@ export default function App() {
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/activities" element={<Activities />} />
+          <Route path="/run" element={<Run />} />
           <Route path="/plan" element={<Plan />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/account" element={<Account />} />
           <Route path="/status" element={<Status />} />
         </Route>
       </Route>
+
       <Route path="*" element={<ComingSoon title="Page not found" />} />
     </Routes>
   )

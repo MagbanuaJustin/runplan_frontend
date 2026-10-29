@@ -22,30 +22,77 @@ function WeeklyTrendChart({ weeks, plan, metric }) {
   const innerW = width - padL - padR
   const innerH = height - padT - padB
 
-  const showPlanned = (w) => plan && w.planned_km > 0 && w.start >= plan.start_date
+  const showPlanned = (week) =>
+    plan && week.planned_km > 0 && week.start >= plan.start_date
 
-  const values = weeks.map((w) => {
-    if (metric === 'pace') return w.actual_pace_seconds_per_km ? w.actual_pace_seconds_per_km / 60 : 0
-    if (metric === 'runs') return w.runs ?? 0
-    return w.actual_km ?? 0
+  const values = weeks.map((week) => {
+    if (metric === 'pace') {
+      const pace = Number(week.actual_pace_seconds_per_km)
+      return Number.isFinite(pace) && pace > 0 ? pace / 60 : null
+    }
+    if (metric === 'runs') return week.runs ?? 0
+    return week.actual_km ?? 0
   })
 
   const plannedValues = metric === 'distance'
-    ? weeks.map((w) => (showPlanned(w) ? w.planned_km : 0))
+    ? weeks.map((week) => (showPlanned(week) ? week.planned_km : 0))
     : []
 
-  const rawMax = Math.max(1, ...values, ...plannedValues)
-  const yMax = metric === 'pace' ? Math.ceil(rawMax + 1) : Math.ceil(rawMax * 1.15)
-  const ticks = [0, 0.5, 1].map((t) => Math.round(yMax * t * 10) / 10)
+  const numericValues = values.filter((value) => Number.isFinite(value))
+  const rawMax = Math.max(1, ...numericValues, ...plannedValues)
+  const yMax = metric === 'pace'
+    ? Math.ceil(rawMax + 1)
+    : Math.ceil(rawMax * 1.15)
+  const ticks = [0, 0.5, 1].map((tick) =>
+    Math.round(yMax * tick * 10) / 10,
+  )
 
-  const xAt = (i) => padL + (weeks.length <= 1 ? innerW / 2 : (i / (weeks.length - 1)) * innerW)
-  const yAt = (v) => padT + innerH - (Math.min(v, yMax) / yMax) * innerH
+  const xAt = (index) =>
+    padL + (weeks.length <= 1 ? innerW / 2 : (index / (weeks.length - 1)) * innerW)
+  const yAt = (value) =>
+    padT + innerH - (Math.min(value, yMax) / yMax) * innerH
 
-  const points = values.map((v, i) => `${xAt(i)},${yAt(v)}`).join(' ')
-  const areaPoints = `${xAt(0)},${padT + innerH} ${points} ${xAt(weeks.length - 1)},${padT + innerH}`
+  const points = values
+    .map((value, index) => (
+      value === null ? null : `${xAt(index)},${yAt(value)}`
+    ))
+    .filter(Boolean)
+    .join(' ')
+
+  const areaPoints = weeks.length > 0
+    ? `${xAt(0)},${padT + innerH} ${points} ${xAt(weeks.length - 1)},${padT + innerH}`
+    : ''
+
+  const paceSegments = []
+  if (metric === 'pace') {
+    let currentSegment = []
+
+    values.forEach((value, index) => {
+      if (value === null) {
+        if (currentSegment.length > 0) {
+          paceSegments.push(currentSegment.join(' '))
+          currentSegment = []
+        }
+        return
+      }
+
+      currentSegment.push(`${xAt(index)},${yAt(value)}`)
+    })
+
+    if (currentSegment.length > 0) {
+      paceSegments.push(currentSegment.join(' '))
+    }
+  }
+
+  const hasPaceData = metric === 'pace' && numericValues.length > 0
 
   return (
-    <svg className="chart-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Weekly ${metric} chart`}>
+    <svg
+      className="chart-svg"
+      viewBox={`0 0 ${width} ${height}`}
+      role="img"
+      aria-label={`Weekly ${metric} chart`}
+    >
       <defs>
         <linearGradient id="rpBlueArea" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.28" />
@@ -53,13 +100,14 @@ function WeeklyTrendChart({ weeks, plan, metric }) {
         </linearGradient>
       </defs>
 
-      {ticks.map((t) => {
-        const y = yAt(t)
-        const label = metric === 'pace' && t > 0
-          ? `${Math.floor(t)}:${String(Math.round((t % 1) * 60)).padStart(2, '0')}`
-          : String(t)
+      {ticks.map((tick) => {
+        const y = yAt(tick)
+        const label = metric === 'pace' && tick > 0
+          ? `${Math.floor(tick)}:${String(Math.round((tick % 1) * 60)).padStart(2, '0')}`
+          : String(tick)
+
         return (
-          <g key={t}>
+          <g key={tick}>
             <line
               x1={padL}
               y1={y}
@@ -82,14 +130,14 @@ function WeeklyTrendChart({ weeks, plan, metric }) {
         )
       })}
 
-      {metric === 'distance' && weeks.map((w, i) => (
-        showPlanned(w) ? (
+      {metric === 'distance' && weeks.map((week, index) => (
+        showPlanned(week) ? (
           <line
-            key={`p-${w.end}`}
-            x1={xAt(i) - 10}
-            x2={xAt(i) + 10}
-            y1={yAt(w.planned_km)}
-            y2={yAt(w.planned_km)}
+            key={`p-${week.end}`}
+            x1={xAt(index) - 10}
+            x2={xAt(index) + 10}
+            y1={yAt(week.planned_km)}
+            y2={yAt(week.planned_km)}
             stroke="var(--text-muted)"
             strokeWidth="2"
             strokeDasharray="2 2"
@@ -97,38 +145,73 @@ function WeeklyTrendChart({ weeks, plan, metric }) {
         ) : null
       ))}
 
-      <polygon points={areaPoints} fill="url(#rpBlueArea)" />
-      <polyline
-        points={points}
-        fill="none"
-        stroke="var(--accent-bright)"
-        strokeWidth="2.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-
-      {weeks.map((w, i) => (
-        <g key={w.end}>
-          <circle
-            cx={xAt(i)}
-            cy={yAt(values[i])}
-            r="3.8"
-            fill="var(--bg-surface)"
+      {metric === 'pace' ? (
+        paceSegments.map((segment, index) => (
+          <polyline
+            key={`pace-${index}`}
+            points={segment}
+            fill="none"
             stroke="var(--accent-bright)"
-            strokeWidth="2.2"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           />
-          <text
-            x={xAt(i)}
-            y={height - 8}
-            textAnchor="middle"
-            fontSize="10"
-            fontFamily="var(--font-mono)"
-            fill="var(--text-muted)"
-          >
-            {formatDate(w.end)}
-          </text>
-        </g>
-      ))}
+        ))
+      ) : (
+        <>
+          {weeks.length > 0 && (
+            <polygon points={areaPoints} fill="url(#rpBlueArea)" />
+          )}
+          <polyline
+            points={points}
+            fill="none"
+            stroke="var(--accent-bright)"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </>
+      )}
+
+      {weeks.map((week, index) => {
+        const value = values[index]
+        if (value === null) return null
+
+        return (
+          <g key={week.end}>
+            <circle
+              cx={xAt(index)}
+              cy={yAt(value)}
+              r="3.8"
+              fill="var(--bg-surface)"
+              stroke="var(--accent-bright)"
+              strokeWidth="2.2"
+            />
+            <text
+              x={xAt(index)}
+              y={height - 8}
+              textAnchor="middle"
+              fontSize="10"
+              fontFamily="var(--font-mono)"
+              fill="var(--text-muted)"
+            >
+              {formatDate(week.end)}
+            </text>
+          </g>
+        )
+      })}
+
+      {metric === 'pace' && !hasPaceData && (
+        <text
+          x={padL + innerW / 2}
+          y={padT + innerH / 2}
+          textAnchor="middle"
+          fontSize="12"
+          fill="var(--text-muted)"
+        >
+          No pace data yet
+        </text>
+      )}
     </svg>
   )
 }
@@ -137,7 +220,7 @@ export default function Dashboard() {
   const [data, setData] = useState(null)
   const [state, setState] = useState('loading')
   const [chartTab, setChartTab] = useState('distance')
-  const [coaching, setCoaching] = useState({ feedback: null, anthropic: null })
+  const [coaching, setCoaching] = useState({ feedback: null, gemini: null })
   const [coachBusy, setCoachBusy] = useState(false)
   const [coachError, setCoachError] = useState('')
 
@@ -145,7 +228,9 @@ export default function Dashboard() {
     const today = new Date().toLocaleDateString('en-CA')
     Promise.all([
       apiGet(`/dashboard?today=${today}`),
-      apiGet('/ai/feedback').catch(() => ({ data: { feedback: null, anthropic: null } })),
+      apiGet('/ai/feedback').catch(() => ({
+        data: { feedback: null, gemini: null },
+      })),
     ])
       .then(([dash, ai]) => {
         setData(dash.data)
@@ -180,8 +265,8 @@ export default function Dashboard() {
   const next = plan?.next_session
   const latestRun = recent?.[0]
   const feedback = coaching?.feedback
-  const anthropicReady = Boolean(coaching?.anthropic?.ready)
-  const isLiveClaude = feedback?.provider_status === 'ok'
+  const geminiReady = Boolean(coaching?.gemini?.ready)
+  const isLiveGemini = feedback?.provider_status === 'ok'
 
   return (
     <>
@@ -219,7 +304,9 @@ export default function Dashboard() {
           </span>
         </div>
         <div className="strip-item">
-          <span className="strip-label">{plan?.goal === 'general_fitness' ? 'Plan remaining' : 'Race countdown'}</span>
+          <span className="strip-label">
+            {plan?.goal === 'general_fitness' ? 'Plan remaining' : 'Race countdown'}
+          </span>
           <span className="strip-value mono">
             {!plan ? '—' : plan.days_left >= 0 ? `${plan.days_left} days` : 'Completed'}
           </span>
@@ -234,6 +321,7 @@ export default function Dashboard() {
 
       {/* Phase 4: advisory weather for the next few days (never changes the plan) */}
       <WeatherPanel />
+
       {/* BioSense-style 4 monospace KPI cards */}
       <p className="section-eyebrow">Last 7 Days Readings</p>
       <section className="kpi-grid" aria-label="Last 7 days metrics">
@@ -271,7 +359,9 @@ export default function Dashboard() {
             <span className="pill pill-muted">7-day sum</span>
           </div>
           <div className="kpi-reading">
-            <span className="kpi-num">{last7.runs > 0 ? formatDuration(last7.duration_seconds) : '0:00'}</span>
+            <span className="kpi-num">
+              {last7.runs > 0 ? formatDuration(last7.duration_seconds) : '0:00'}
+            </span>
             <span className="kpi-unit">h:mm:ss</span>
           </div>
           <span className="kpi-trend">&rarr; First-party manual logs</span>
@@ -289,7 +379,9 @@ export default function Dashboard() {
             <span className="kpi-unit">/km</span>
           </div>
           <span className="kpi-trend">
-            &rarr; {previous7.pace_label ? `Prior 7d: ${previous7.pace_label} /km` : 'Log runs to compare pace'}
+            &rarr; {previous7.pace_label
+              ? `Prior 7d: ${previous7.pace_label} /km`
+              : 'Log runs to compare pace'}
           </span>
         </div>
       </section>
@@ -330,7 +422,7 @@ export default function Dashboard() {
             {chartTab === 'distance'
               ? 'Solid blue line = logged km per 7-day block. Dashed grey marks = planned weekly distance.'
               : chartTab === 'pace'
-                ? 'Weekly average pace in minutes per km across logged manual runs.'
+                ? 'Weekly average pace in minutes per km across logged manual runs. Gaps indicate weeks without runs.'
                 : 'Completed manual runs recorded in each 7-day block.'}
           </small>
         </section>
@@ -386,7 +478,9 @@ export default function Dashboard() {
               </dl>
 
               <div className="btn-row">
-                <Link className="btn btn-primary" to={`/activities?session=${next.id}`}>Log this run</Link>
+                <Link className="btn btn-primary" to={`/activities?session=${next.id}`}>
+                  Log this run
+                </Link>
                 <Link className="btn btn-secondary" to="/calendar">Move or skip</Link>
               </div>
             </>
@@ -404,17 +498,18 @@ export default function Dashboard() {
 
           {recent.length === 0 ? (
             <p className="note">
-              No manual runs logged yet. Record your first workout on the <Link to="/activities">Log a Run</Link> page.
+              No manual runs logged yet. Record your first workout on the{' '}
+              <Link to="/activities">Log a Run</Link> page.
             </p>
           ) : (
             <ul className="runs">
-              {recent.map((r) => (
-                <li key={r.id} className="card">
-                  <strong>{r.activity_date}</strong>
-                  <span>{r.distance_km} km</span>
-                  <span>{formatDuration(r.duration_seconds)}</span>
-                  <span>{r.pace_label} /km</span>
-                  {r.from_plan && <span className="pill">Plan run</span>}
+              {recent.map((run) => (
+                <li key={run.id} className="card">
+                  <strong>{run.activity_date}</strong>
+                  <span>{run.distance_km} km</span>
+                  <span>{formatDuration(run.duration_seconds)}</span>
+                  <span>{run.pace_label} /km</span>
+                  {run.from_plan && <span className="pill">Plan run</span>}
                 </li>
               ))}
             </ul>
@@ -439,7 +534,9 @@ export default function Dashboard() {
               <p style={{ margin: '0 0 12px', color: 'var(--text-secondary)' }}>
                 Completion rate to date:{' '}
                 <strong className="mono" style={{ color: 'var(--text)', fontSize: 16 }}>
-                  {plan.completion_rate === null ? 'None due yet' : `${plan.completion_rate}%`}
+                  {plan.completion_rate === null
+                    ? 'None due yet'
+                    : `${plan.completion_rate}%`}
                 </strong>{' '}
                 ({plan.completed} of {plan.due} due sessions completed; {plan.skipped} skipped, {plan.missed} missed).
               </p>
@@ -465,11 +562,11 @@ export default function Dashboard() {
       <section className="plan-card" aria-labelledby="coach-title" style={{ marginTop: 14 }}>
         <div className="panel-head">
           <h2 id="coach-title">Weekly coaching review</h2>
-          <span className={`pill ${isLiveClaude ? 'pill-ok' : anthropicReady ? '' : 'pill-muted'}`}>
-            {isLiveClaude
-              ? '\u2713 Claude AI'
-              : anthropicReady
-                ? 'Claude AI ready'
+          <span className={`pill ${isLiveGemini ? 'pill-ok' : geminiReady ? '' : 'pill-muted'}`}>
+            {isLiveGemini
+              ? '\u2713 Gemini AI'
+              : geminiReady
+                ? 'Gemini AI ready'
                 : 'Rule-based coach'}
           </span>
         </div>
@@ -477,14 +574,18 @@ export default function Dashboard() {
         {!feedback ? (
           <p className="note">
             Generate a 7-day conditioning review from your manual runs and active plan adherence.
-            {!anthropicReady && ' (Anthropic API key is currently off in .env, so RunPlan will use its built-in rule-based coach.)'}
+            {!geminiReady && ' (Gemini is not configured or enabled in the backend .env, so RunPlan will use its built-in rule-based coach.)'}
           </p>
         ) : (
           <>
             <p className="mono" style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--text-muted)' }}>
               Window: {formatDate(feedback.period_start)} &ndash; {formatDate(feedback.period_end)}
-              {feedback.provider_status === 'cap_reached' ? ' · Monthly AI cap reached (rule-based fallback)' : ''}
-              {feedback.provider_status === 'fallback' ? ' · AI unreachable (rule-based fallback)' : ''}
+              {feedback.provider_status === 'cap_reached'
+                ? ' · Monthly AI cap reached (rule-based fallback)'
+                : ''}
+              {feedback.provider_status === 'fallback'
+                ? ' · AI unreachable (rule-based fallback)'
+                : ''}
             </p>
             <p style={{ margin: '0 0 12px', whiteSpace: 'pre-line', lineHeight: 1.6 }}>
               {feedback.feedback_text}

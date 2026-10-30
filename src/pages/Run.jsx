@@ -7,8 +7,10 @@ import { TYPE_LABELS, formatLongDate } from '../format.js'
 import { watchLocation } from '../location.js'
 
 const DEFAULT_CENTER = [12.8797, 121.774]
-const MAX_GPS_ACCURACY_METERS = 50
+const MAX_GPS_ACCURACY_METERS = 25
 const MAX_START_ACCURACY_METERS = 150
+const MIN_PACE_DISTANCE_KM = 0.1
+const MAX_GPS_SPEED_METERS_PER_SECOND = 8
 
 function distanceBetween(a, b) {
   const earthRadiusMeters = 6371000
@@ -38,9 +40,17 @@ function formatElapsed(totalSeconds) {
 }
 
 function formatPace(totalSeconds, distanceKm) {
-  if (distanceKm <= 0) return '--:--'
+  if (!Number.isFinite(distanceKm) || distanceKm < MIN_PACE_DISTANCE_KM) {
+    return '--:--'
+  }
 
   const secondsPerKm = Math.round(totalSeconds / distanceKm)
+
+  // Hide readings outside the pace limits accepted by the activity API.
+  if (secondsPerKm < 120 || secondsPerKm > 1500) {
+    return '--:--'
+  }
+
   const minutes = Math.floor(secondsPerKm / 60)
   const seconds = secondsPerKm % 60
 
@@ -181,6 +191,15 @@ export default function Run() {
   const stopWatchingRef = useRef(null)
   const pendingResumeRef = useRef(false)
 
+  const plannedDistanceKm = linkedSession
+    ? Number(linkedSession.planned_distance_km)
+    : null
+  const hasPlannedDistance =
+    Number.isFinite(plannedDistanceKm) && plannedDistanceKm > 0
+  const linkedWorkoutComplete =
+    Boolean(linkedSession && hasPlannedDistance) &&
+    distanceRef.current >= plannedDistanceKm - 0.000001
+
   useEffect(() => {
     if (!sessionId) {
       setLinkedSession(null)
@@ -266,12 +285,80 @@ export default function Run() {
       return
     }
 
-    if (meters < 1.5) {
+    const averageAccuracy =
+      ((Number(previous.accuracy) || 0) + (Number(point.accuracy) || 0)) / 2
+    const minimumMovementMeters = Math.max(
+      1.5,
+      Math.min(averageAccuracy * 0.25, 5),
+    )
+
+    if (meters < minimumMovementMeters) {
       lastPointRef.current = point
       return
     }
 
-    if (meters / seconds > 12) return
+    if (meters / seconds > MAX_GPS_SPEED_METERS_PER_SECOND) return
+
+    if (hasPlannedDistance) {
+      const remainingMeters =
+        (plannedDistanceKm - distanceRef.current) * 1000
+
+      if (remainingMeters <= 0.01) {
+        distanceRef.current = plannedDistanceKm
+        setDistanceKm(plannedDistanceKm)
+        stopRecordingSegment('finished')
+        return
+      }
+
+      const acceptedMeters = Math.min(meters, remainingMeters)
+      const reachesTarget =
+        distanceRef.current + acceptedMeters / 1000 >=
+        plannedDistanceKm - 0.000001
+      const ratio = acceptedMeters / meters
+
+      const recordedPoint =
+        ratio < 1
+          ? {
+              ...point,
+              latitude:
+                previous.latitude +
+                (point.latitude - previous.latitude) * ratio,
+              longitude:
+                previous.longitude +
+                (point.longitude - previous.longitude) * ratio,
+              timestamp:
+                previous.timestamp +
+                (point.timestamp - previous.timestamp) * ratio,
+            }
+          : point
+
+      distanceRef.current = reachesTarget
+        ? plannedDistanceKm
+        : distanceRef.current + acceptedMeters / 1000
+      lastPointRef.current = recordedPoint
+      setDistanceKm(distanceRef.current)
+
+      const nextSegments = [...routeSegmentsRef.current]
+      const lastIndex = nextSegments.length - 1
+
+      if (lastIndex >= 0) {
+        nextSegments[lastIndex] = [
+          ...nextSegments[lastIndex],
+          recordedPoint,
+        ]
+        routeSegmentsRef.current = nextSegments
+        setRouteSegments(nextSegments)
+      }
+
+      if (reachesTarget) {
+        setResumeMode(false)
+        pendingResumeRef.current = false
+        setError('')
+        stopRecordingSegment('finished')
+      }
+
+      return
+    }
 
     lastPointRef.current = point
     distanceRef.current += meters / 1000
@@ -457,8 +544,27 @@ export default function Run() {
   }
 
   async function saveRun() {
-    if (distanceRef.current <= 0 || elapsedRef.current <= 0) {
-      setError('Record some reliable distance before saving this run.')
+    const distanceToSaveKm =
+      Math.round((distanceRef.current + Number.EPSILON) * 100) / 100
+    const durationToSaveSeconds = Math.max(
+      1,
+      Math.floor(elapsedRef.current),
+    )
+
+    if (distanceToSaveKm < 0.01 || elapsedRef.current <= 0) {
+      setError(
+        'GPS has not recorded enough reliable distance to save yet. Wait for a stronger GPS track and record at least 0.01 km.',
+      )
+      return
+    }
+
+    const paceSecondsPerKm =
+      durationToSaveSeconds / distanceToSaveKm
+
+    if (paceSecondsPerKm < 120 || paceSecondsPerKm > 1500) {
+      setError(
+        'The GPS distance and time do not produce a valid running pace yet. Wait for a more reliable GPS track before saving.',
+      )
       return
     }
 
@@ -468,11 +574,15 @@ export default function Run() {
     try {
       await apiPost('/activities', {
         activity_date: localDate(),
-        distance_km: distanceRef.current.toFixed(3),
-        duration_seconds: Math.max(1, Math.floor(elapsedRef.current)),
+        distance_km: distanceToSaveKm.toFixed(2),
+        duration_seconds: durationToSaveSeconds,
         effort: null,
-        notes: 'Recorded with the RunPlan GPS tracker.',
-        ...(linkedSession ? { session_id: linkedSession.id } : {}),
+        notes: linkedSession && !linkedWorkoutComplete
+          ? 'Recorded with the RunPlan GPS tracker. Planned workout was not completed.'
+          : 'Recorded with the RunPlan GPS tracker.',
+        ...(linkedWorkoutComplete
+          ? { session_id: linkedSession.id }
+          : {}),
       })
       setSaved(true)
     } catch (saveError) {
@@ -520,7 +630,11 @@ export default function Run() {
         ? 'Recording — waiting for more accurate GPS'
         : 'Recording GPS',
     paused: 'Paused',
-    finished: saved ? 'Run saved' : 'Run finished',
+    finished: saved
+      ? 'Run saved'
+      : linkedWorkoutComplete
+        ? 'Planned distance reached'
+        : 'Run finished',
   }[status]
 
   const displayedElapsedSeconds =
@@ -551,7 +665,8 @@ export default function Run() {
             <span className="pill">Linked to calendar</span>
           </div>
           <p className="note" style={{ marginBottom: 0 }}>
-            {formatLongDate(linkedSession.scheduled_date)} · Planned distance: {linkedSession.planned_distance_km} km
+            {formatLongDate(linkedSession.scheduled_date)} · Planned distance:{' '}
+            {plannedDistanceKm} km · Recording stops automatically at this distance.
           </p>
         </section>
       )}
@@ -901,9 +1016,11 @@ export default function Run() {
       {error && <p className="error" role="alert">{error}</p>}
       {saved && (
         <p className="note" role="status">
-          {linkedSession
+          {linkedWorkoutComplete
             ? 'Run saved and linked to this calendar workout. The workout is now marked complete.'
-            : 'Run saved to your activity history.'}
+            : linkedSession
+              ? 'Run saved to your activity history. The planned workout remains open because its target distance was not reached.'
+              : 'Run saved to your activity history.'}
         </p>
       )}
 

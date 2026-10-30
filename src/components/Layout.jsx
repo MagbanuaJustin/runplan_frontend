@@ -152,11 +152,54 @@ const NAV_GROUPS = [
       {
         to: '/status',
         label: 'System Status',
+        adminOnly: true,
         icon: (
           <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="2" y="3" width="20" height="7" rx="2" />
             <rect x="2" y="14" width="20" height="7" rx="2" />
             <path d="M6 6.5h.01M6 17.5h.01" />
+          </svg>
+        ),
+      },
+    ],
+  },
+  {
+    label: 'Help & Reports',
+    items: [
+      {
+        to: '/summary',
+        label: 'Summary Report',
+        icon: (
+          <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M4 19V5M4 19h16" /><path d="m7 15 4-4 3 2 5-6" />
+          </svg>
+        ),
+      },
+      {
+        to: '/support/report',
+        label: 'Report a Problem',
+        icon: (
+          <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M4 21V5a2 2 0 0 1 2-2h13l-2 5 2 5H6" />
+          </svg>
+        ),
+      },
+      {
+        to: '/support/reports',
+        label: 'My Reports',
+        icon: (
+          <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M8 6h13M8 12h13M8 18h13" /><path d="M3 6h.01M3 12h.01M3 18h.01" />
+          </svg>
+        ),
+      },
+      {
+        to: '/support',
+        label: 'Support Console',
+        adminOnly: true,
+        icon: (
+          <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" /><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2-3 4M12 17h.01" />
           </svg>
         ),
       },
@@ -173,10 +216,15 @@ const PAGE_TITLES = {
   '/profile': 'Runner Profile',
   '/account': 'Account & Security',
   '/status': 'System Status',
+  '/summary': 'Summary Report',
+  '/support/report': 'Report a Problem',
+  '/support/reports': 'My Reports',
+  '/support': 'Support Console',
 }
 
 export default function Layout() {
   const { user, logout } = useAuth()
+  const isAdmin = user?.role === 'admin'
   const location = useLocation()
   const [confirming, setConfirming] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -364,10 +412,12 @@ export default function Layout() {
         </div>
 
         <nav className="sidebar-nav" aria-label="Main">
-          {NAV_GROUPS.map((group, idx) => (
-            <div key={group.label ?? idx} className="nav-group">
+          {NAV_GROUPS.map((group, idx) => {
+            const items = group.items.filter((item) => !item.adminOnly || isAdmin)
+            if (items.length === 0) return null
+            return <div key={group.label ?? idx} className="nav-group">
               {group.label && <span className="nav-group-label">{group.label}</span>}
-              {group.items.map((item) => (
+              {items.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
@@ -379,7 +429,7 @@ export default function Layout() {
                 </NavLink>
               ))}
             </div>
-          ))}
+          })}
         </nav>
 
         <div className="sidebar-footer">

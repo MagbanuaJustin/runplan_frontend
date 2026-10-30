@@ -9,3 +9,13 @@ export default function ProtectedRoute() {
   if (status === 'out') return <Navigate to="/login" replace state={{ from: location }} />
   return <Outlet />
 }
+
+export function AdminRoute() {
+  const { status, user } = useAuth()
+  const location = useLocation()
+
+  if (status === 'loading') return <p role="status" className="shell">Loading...</p>
+  if (status === 'out') return <Navigate to="/login" replace state={{ from: location }} />
+  if (user?.role !== 'admin') return <Navigate to="/dashboard" replace />
+  return <Outlet />
+}

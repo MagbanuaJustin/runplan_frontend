@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout.jsx'
-import ProtectedRoute from './auth/ProtectedRoute.jsx'
+import ProtectedRoute, { AdminRoute } from './auth/ProtectedRoute.jsx'
 import Login from './pages/Login.jsx'
 import Register from './pages/Register.jsx'
 import ForgotPassword from './pages/ForgotPassword.jsx'
@@ -14,6 +14,10 @@ import Plan from './pages/Plan.jsx'
 import Calendar from './pages/Calendar.jsx'
 import Account from './pages/Account.jsx'
 import Status from './pages/Status.jsx'
+import SummaryReport from './pages/SummaryReport.jsx'
+import ReportProblem from './pages/ReportProblem.jsx'
+import MyReports from './pages/MyReports.jsx'
+import SupportConsole from './pages/SupportConsole.jsx'
 
 export default function App() {
   return (
@@ -33,7 +37,14 @@ export default function App() {
           <Route path="/plan" element={<Plan />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/account" element={<Account />} />
-          <Route path="/status" element={<Status />} />
+          <Route path="/summary" element={<SummaryReport />} />
+          <Route path="/support/report" element={<ReportProblem />} />
+          <Route path="/support/reports" element={<MyReports />} />
+
+          <Route element={<AdminRoute />}>
+            <Route path="/status" element={<Status />} />
+            <Route path="/support" element={<SupportConsole />} />
+          </Route>
         </Route>
       </Route>
 

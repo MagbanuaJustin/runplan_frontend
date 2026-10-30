@@ -45,10 +45,11 @@ export default function Status() {
   })
 
   useEffect(() => {
-    Promise.all([apiGet('/health'), apiGet('/integrations/status')])
-      .then(([h, i]) => {
-        setHealth(h)
-        setIntegrations(i.data)
+    apiGet('/support/system')
+      .then((response) => {
+        const system = response.data
+        setHealth({ status: system.api?.status })
+        setIntegrations({ providers: system.providers, core_enabled: system.core_enabled })
         setState('ready')
       })
       .catch(() => setState('error'))

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { apiGet, apiPost, apiPut } from '../api.js'
 import Field from '../components/Field.jsx'
+import ProfilePhoto from '../components/ProfilePhoto.jsx'
 
 const EXPERIENCE = [['beginner', 'Beginner'], ['intermediate', 'Intermediate'], ['advanced', 'Advanced']]
 const GOALS = [
@@ -252,7 +253,12 @@ export default function Profile() {
     <>
       <h1>Profile</h1>
 
-      <section className="plan-card" style={{ maxWidth: 820 }}>
+      <section
+        className="plan-card"
+        style={{ maxWidth: 820, margin: '0 auto 16px' }}
+      >
+        <ProfilePhoto displayName={form.display_name} />
+
         <div className="panel-head">
           <h2>Training preferences &amp; baseline</h2>
           <span className="pill">Runner profile</span>
@@ -441,7 +447,11 @@ export default function Profile() {
         </form>
       </section>
 
-      <section className="plan-card" style={{ maxWidth: 820, marginTop: 18 }} aria-labelledby="run-reminders-title">
+      <section
+        className="plan-card"
+        style={{ maxWidth: 820, margin: '18px auto 0' }}
+        aria-labelledby="run-reminders-title"
+      >
         <div className="panel-head">
           <h2 id="run-reminders-title">Upcoming run reminders</h2>
           <span className={`pill ${reminders.enabled && reminders.subscribed ? 'pill-ok' : 'pill-muted'}`}>

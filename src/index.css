@@ -2308,7 +2308,7 @@ a.btn-secondary:hover {
   flex: 1;
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(170px, 220px) minmax(0, 900px) minmax(170px, 220px);
+  grid-template-columns: minmax(0, 900px) minmax(170px, 220px);
   justify-content: center;
   align-items: start;
   gap: clamp(14px, 1.6vw, 26px);
@@ -2499,12 +2499,8 @@ a.btn-secondary:hover {
     padding: 0 0 12px;
   }
 
-  .page-context-left {
-    order: 2;
-  }
-
   .page-context-right {
-    order: 3;
+    order: 2;
   }
 }
 

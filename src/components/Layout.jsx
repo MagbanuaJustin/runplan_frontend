@@ -454,15 +454,12 @@ export default function Layout() {
         </header>
 
         <div className="workspace-content">
-          <aside className="page-context-column page-context-left" aria-label="Page guidance">
-            <PageContext pathname={location.pathname} side="left" />
-          </aside>
-
           <main className="shell">
             <Outlet />
           </main>
 
-          <aside className="page-context-column page-context-right" aria-label="Related actions">
+          <aside className="page-context-column page-context-right" aria-label="Page guidance and related actions">
+            <PageContext pathname={location.pathname} side="left" />
             <PageContext pathname={location.pathname} side="right" />
           </aside>
         </div>

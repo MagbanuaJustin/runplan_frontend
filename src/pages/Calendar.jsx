@@ -301,7 +301,8 @@ export default function Calendar() {
 
               {session.status !== 'completed' && (
                 <div className="btn-row">
-                  <Link className="btn btn-primary" to={`/activities?session=${session.id}`}>Log this run</Link>
+                  <Link className="btn btn-primary" to={`/run?session=${session.id}`}>Start a run</Link>
+                  <Link className="btn btn-secondary" to={`/activities?session=${session.id}`}>Log manually</Link>
                   {canMove && !moving && (
                     <button
                       type="button"

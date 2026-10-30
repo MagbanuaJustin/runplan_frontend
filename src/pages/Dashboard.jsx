@@ -478,8 +478,11 @@ export default function Dashboard() {
               </dl>
 
               <div className="btn-row">
-                <Link className="btn btn-primary" to={`/activities?session=${next.id}`}>
-                  Log this run
+                <Link className="btn btn-primary" to={`/run?session=${next.id}`}>
+                  Start a run
+                </Link>
+                <Link className="btn btn-secondary" to={`/activities?session=${next.id}`}>
+                  Log manually
                 </Link>
                 <Link className="btn btn-secondary" to="/calendar">Move or skip</Link>
               </div>

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { CircleMarker, MapContainer, Polyline, TileLayer, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
-import { apiPost } from '../api.js'
+import { apiGet, apiPost } from '../api.js'
+import { TYPE_LABELS, formatLongDate } from '../format.js'
 import { watchLocation } from '../location.js'
 
 const DEFAULT_CENTER = [12.8797, 121.774]
@@ -155,6 +156,10 @@ function FollowRunner({ center }) {
 }
 
 export default function Run() {
+  const [searchParams] = useSearchParams()
+  const sessionId = searchParams.get('session')
+  const [linkedSession, setLinkedSession] = useState(null)
+  const [sessionState, setSessionState] = useState(sessionId ? 'loading' : 'none')
   const [status, setStatus] = useState('idle')
   const [currentPosition, setCurrentPosition] = useState(null)
   const [gpsAccuracy, setGpsAccuracy] = useState(null)
@@ -175,6 +180,27 @@ export default function Run() {
   const segmentStartedAtRef = useRef(null)
   const stopWatchingRef = useRef(null)
   const pendingResumeRef = useRef(false)
+
+  useEffect(() => {
+    if (!sessionId) {
+      setLinkedSession(null)
+      setSessionState('none')
+      return
+    }
+
+    setSessionState('loading')
+    apiGet('/plans/current')
+      .then((body) => {
+        const session = body.data.active?.sessions.find((item) => String(item.id) === sessionId)
+        if (!session || session.status === 'completed') {
+          setSessionState('invalid')
+          return
+        }
+        setLinkedSession(session)
+        setSessionState('ready')
+      })
+      .catch(() => setSessionState('invalid'))
+  }, [sessionId])
 
   const mapCenter = useMemo(() => {
     if (!currentPosition) return null
@@ -446,10 +472,15 @@ export default function Run() {
         duration_seconds: Math.max(1, Math.floor(elapsedRef.current)),
         effort: null,
         notes: 'Recorded with the RunPlan GPS tracker.',
+        ...(linkedSession ? { session_id: linkedSession.id } : {}),
       })
       setSaved(true)
     } catch (saveError) {
-      setError(saveError.message || 'Could not save this run.')
+      setError(
+        saveError.fields
+          ? Object.values(saveError.fields).join(' ')
+          : saveError.message || 'Could not save this run.',
+      )
     } finally {
       setSaving(false)
     }
@@ -497,8 +528,34 @@ export default function Run() {
       ? 0
       : elapsedSeconds
 
+  if (sessionState === 'loading') {
+    return <p role="status">Loading planned workout…</p>
+  }
+
+  if (sessionState === 'invalid') {
+    return (
+      <section className="plan-card">
+        <h2>Planned workout unavailable</h2>
+        <p className="note">This workout may already be completed or is no longer in your active plan.</p>
+        <Link className="btn btn-primary" to="/calendar">Back to calendar</Link>
+      </section>
+    )
+  }
+
   return (
     <>
+      {linkedSession && (
+        <section className="plan-card" aria-label="Planned workout linked to this run">
+          <div className="panel-head">
+            <h2>{TYPE_LABELS[linkedSession.type] ?? linkedSession.type} workout</h2>
+            <span className="pill">Linked to calendar</span>
+          </div>
+          <p className="note" style={{ marginBottom: 0 }}>
+            {formatLongDate(linkedSession.scheduled_date)} · Planned distance: {linkedSession.planned_distance_km} km
+          </p>
+        </section>
+      )}
+
       <style>{`
         .run-toolbar {
           display: flex;
@@ -754,14 +811,18 @@ export default function Run() {
           )}
 
           {status === 'finished' && saved && (
-            <button
-              type="button"
-              className="run-action run-action--primary"
-              onClick={startAnotherRun}
-            >
-              <span className="run-action-icon"><ActionIcon name="again" /></span>
-              Start another run
-            </button>
+            linkedSession ? (
+              <Link to="/calendar" className="run-action run-action--primary">View calendar</Link>
+            ) : (
+              <button
+                type="button"
+                className="run-action run-action--primary"
+                onClick={startAnotherRun}
+              >
+                <span className="run-action-icon"><ActionIcon name="again" /></span>
+                Start another run
+              </button>
+            )
           )}
         </div>
       </div>
@@ -838,7 +899,13 @@ export default function Run() {
       </section>
 
       {error && <p className="error" role="alert">{error}</p>}
-      {saved && <p className="note" role="status">Run saved to your activity history.</p>}
+      {saved && (
+        <p className="note" role="status">
+          {linkedSession
+            ? 'Run saved and linked to this calendar workout. The workout is now marked complete.'
+            : 'Run saved to your activity history.'}
+        </p>
+      )}
 
       <p className="note">
         Keep this page open while recording. Map tiles © OpenStreetMap contributors.

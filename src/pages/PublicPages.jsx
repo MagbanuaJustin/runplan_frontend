@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { ThemeToggle } from '../components/Layout.jsx'
 
 const effectiveDate = 'October 30, 2026'
 const downloadAfterLogin = { from: { pathname: '/download' } }
@@ -22,6 +23,7 @@ function PublicHeader() {
         >
           Sign in
         </Link>
+        <ThemeToggle />
       </nav>
     </header>
   )
@@ -191,6 +193,11 @@ function PublicShell({ children }) {
           transition: transform .15s ease, border-color .15s ease, background .15s ease;
         }
 
+        .public-site a.public-button,
+        .public-site a.public-button:visited {
+          color: #edf2fb;
+        }
+
         .public-button:hover {
           transform: translateY(-1px);
           border-color: var(--accent-bright, #60a5fa);
@@ -198,14 +205,30 @@ function PublicShell({ children }) {
         }
 
         .public-button-primary {
-          color: var(--accent-fg, #fff);
-          border-color: var(--accent, #3b82f6);
-          background: var(--accent, #3b82f6);
+          color: #fff;
+          border-color: #3b82f6;
+          background: #2563eb;
         }
 
-        .public-button-primary:hover {
-          border-color: var(--accent-hover, #2563eb);
-          background: var(--accent-hover, #2563eb);
+        .public-site a.public-button-primary,
+        .public-site a.public-button-primary:visited {
+          color: #fff;
+          border-color: #3b82f6;
+          background: #2563eb;
+        }
+
+        .public-button-primary:hover,
+        .public-site a.public-button-primary:hover,
+        .public-site a.public-button-primary:visited:hover {
+          color: #fff;
+          border-color: #1d4ed8;
+          background: #1d4ed8;
+          box-shadow: 0 8px 22px rgba(37, 99, 235, .28);
+        }
+
+        .public-site a.public-button:focus-visible {
+          outline: 3px solid #93c5fd;
+          outline-offset: 3px;
         }
 
         .public-section {

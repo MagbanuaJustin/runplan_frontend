@@ -217,7 +217,27 @@ export default function Register() {
       </section>
 
       <main className="auth-panel">
-        <div className="auth-panel-top">
+        <div
+          className="auth-panel-top"
+          style={{
+            left: '28px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+          }}
+        >
+          <Link
+            to="/"
+            style={{
+              color: 'var(--accent-bright)',
+              fontSize: '13px',
+              fontWeight: 650,
+              textDecoration: 'none',
+            }}
+          >
+            ← Back to RunPlan
+          </Link>
           <ThemeToggle />
         </div>
 

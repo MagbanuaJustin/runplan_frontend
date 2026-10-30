@@ -64,22 +64,26 @@ export function AuthProvider({ children }) {
       .catch(() => setStatus('out'))
   }, [startSession])
 
-  async function login(email, password, recaptchaToken) {
-    const body = await apiPost('/auth/login', {
-      email,
-      password,
-      recaptcha_token: recaptchaToken,
-    })
-
+  async function login(email, password) {
+    const body = await apiPost('/auth/login', { email, password })
     startSession(body.data)
   }
 
-  async function loginWithGoogle(idToken, recaptchaToken) {
-    const body = await apiPost('/auth/google', {
-      credential: idToken,
-      recaptcha_token: recaptchaToken,
-    })
+  async function loginWithGoogle(
+    idToken,
+    recaptchaToken,
+    termsAccepted = false,
+    termsVersion = '',
+  ) {
+    const payload = { credential: idToken }
 
+    if (recaptchaToken) payload.recaptcha_token = recaptchaToken
+    if (termsAccepted) {
+      payload.terms_accepted = true
+      payload.terms_version = termsVersion
+    }
+
+    const body = await apiPost('/auth/google', payload)
     startSession(body.data)
   }
 

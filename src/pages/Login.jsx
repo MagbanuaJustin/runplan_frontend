@@ -1,18 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext.jsx'
-import useRecaptcha from '../auth/useRecaptcha.js'
 import { BrandLogo, ThemeToggle } from '../components/Layout.jsx'
 
 const GOOGLE_SCRIPT_ID = 'runplan-google-identity-services'
 const GOOGLE_SCRIPT_URL = 'https://accounts.google.com/gsi/client'
+
 export default function Login() {
   const { status, login, loginWithGoogle } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const googleButtonRef = useRef(null)
   const googleBusyRef = useRef(false)
-  const recaptcha = useRecaptcha()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -40,20 +39,17 @@ export default function Login() {
     setGoogleSigningIn(true)
     setBusy(true)
 
-    let recaptchaToken = ''
     try {
-      recaptchaToken = recaptcha.getToken()
-      await loginWithGoogle(idToken, recaptchaToken)
+      await loginWithGoogle(idToken)
       navigate(from, { replace: true })
     } catch (err) {
       setError(err.message || 'Google sign-in failed. Please try again.')
     } finally {
-      if (recaptchaToken) recaptcha.reset()
       googleBusyRef.current = false
       setGoogleSigningIn(false)
       setBusy(false)
     }
-  }, [recaptcha.getToken, recaptcha.reset, loginWithGoogle, navigate, from])
+  }, [loginWithGoogle, navigate, from])
 
   useEffect(() => {
     if (!clientId) {
@@ -150,15 +146,12 @@ export default function Login() {
     setGoogleSigningIn(false)
     setBusy(true)
 
-    let recaptchaToken = ''
     try {
-      recaptchaToken = recaptcha.getToken()
-      await login(email, password, recaptchaToken)
+      await login(email, password)
       navigate(from, { replace: true })
     } catch (err) {
       setError(err.message || 'Sign-in failed. Please try again.')
     } finally {
-      if (recaptchaToken) recaptcha.reset()
       setBusy(false)
     }
   }
@@ -298,37 +291,15 @@ export default function Login() {
               </div>
             </div>
 
-            <div className="field recaptcha-field">
-              <label>Human verification</label>
-              <div className="recaptcha-widget" ref={recaptcha.containerRef} />
-              {recaptcha.error ? (
-                <p className="error" role="alert">{recaptcha.error}</p>
-              ) : !recaptcha.ready ? (
-                <small role="status">Loading secure verification…</small>
-              ) : recaptcha.verified ? (
-                <small className="recaptcha-success" role="status">Verification complete.</small>
-              ) : (
-                <small role="status">Complete the checkbox to continue.</small>
-              )}
-            </div>
-
             {error && <p className="error" role="alert">{error}</p>}
 
-            <button type="submit" disabled={busy || !recaptcha.verified}>
+            <button type="submit" disabled={busy}>
               {busy
                 ? googleSigningIn
                   ? 'Google sign-in in progress…'
                   : 'Signing in…'
                 : 'Sign in'}
             </button>
-
-            <div className="recaptcha-disclosure">
-              <small>
-                This site is protected by reCAPTCHA and the Google{' '}
-                <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>{' '}
-                and <a href="https://policies.google.com/terms" target="_blank" rel="noreferrer">Terms of Service</a> apply.
-              </small>
-            </div>
           </form>
 
           <div style={{ marginTop: '18px' }} aria-busy={googleSigningIn}>
@@ -349,8 +320,7 @@ export default function Login() {
                 display: busy ? 'none' : 'flex',
                 justifyContent: 'center',
                 minHeight: '40px',
-                pointerEvents: busy || !recaptcha.verified ? 'none' : 'auto',
-                opacity: recaptcha.verified ? 1 : 0.55,
+                pointerEvents: busy ? 'none' : 'auto',
               }}
             />
 

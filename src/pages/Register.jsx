@@ -6,6 +6,8 @@ import useRecaptcha from '../auth/useRecaptcha.js'
 import { BrandLogo, ThemeToggle } from '../components/Layout.jsx'
 
 const GOOGLE_SCRIPT_SRC = 'https://accounts.google.com/gsi/client'
+const TERMS_VERSION = '2026-10-30'
+const DOWNLOAD_PATH = '/download'
 
 export default function Register() {
   const { status, loginWithGoogle } = useAuth()
@@ -19,6 +21,7 @@ export default function Register() {
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [showPw, setShowPw] = useState(false)
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [errors, setErrors] = useState({})
   const [formError, setFormError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -93,14 +96,25 @@ export default function Register() {
       return
     }
 
+    if (!acceptedTerms) {
+      setErrors({ terms: 'Please accept the Terms of Use and Privacy Notice.' })
+      return
+    }
+
     setFormError('')
+    setErrors({})
     setBusy(true)
 
     let recaptchaToken = ''
     try {
       recaptchaToken = recaptcha.getToken()
-      await loginWithGoogle(response.credential, recaptchaToken)
-      navigate('/dashboard', { replace: true })
+      await loginWithGoogle(
+        response.credential,
+        recaptchaToken,
+        true,
+        TERMS_VERSION,
+      )
+      navigate(DOWNLOAD_PATH, { replace: true })
     } catch (err) {
       setFormError(err.message || 'Google sign-up failed. Please try again.')
     } finally {
@@ -109,7 +123,9 @@ export default function Register() {
     }
   }
 
-  if (status === 'in') return <Navigate to="/dashboard" replace />
+  if (status === 'in') {
+    return <Navigate to={DOWNLOAD_PATH} replace />
+  }
 
   const invalid = (key, id) => ({
     'aria-invalid': errors[key] ? 'true' : undefined,
@@ -120,8 +136,17 @@ export default function Register() {
     e.preventDefault()
     setFormError('')
 
+    const nextErrors = {}
+
     if (password !== confirm) {
-      setErrors({ confirm: 'The passwords do not match.' })
+      nextErrors.confirm = 'The passwords do not match.'
+    }
+    if (!acceptedTerms) {
+      nextErrors.terms = 'Please accept the Terms of Use and Privacy Notice.'
+    }
+
+    if (Object.keys(nextErrors).length) {
+      setErrors(nextErrors)
       return
     }
 
@@ -135,11 +160,16 @@ export default function Register() {
         email,
         password,
         recaptcha_token: recaptchaToken,
+        terms_accepted: true,
+        terms_version: TERMS_VERSION,
       })
 
       navigate('/login', {
         replace: true,
-        state: { notice: 'Your account was created. Sign in to continue.' },
+        state: {
+          from: { pathname: DOWNLOAD_PATH },
+          notice: 'Your account was created. Sign in to download RunPlan.',
+        },
       })
     } catch (err) {
       if (err.fields) setErrors(err.fields)
@@ -194,7 +224,7 @@ export default function Register() {
         <div className="auth-card">
           <h1>Create account</h1>
           <p className="auth-subtitle">
-            Start planning your training schedule in under a minute.
+            Create a RunPlan account to continue to the Android download.
           </p>
 
           <form className="form" onSubmit={handleSubmit} noValidate>
@@ -263,6 +293,51 @@ export default function Register() {
               )}
             </div>
 
+            <div className="field">
+              <label
+                htmlFor="reg-terms"
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '9px',
+                  cursor: 'pointer',
+                  lineHeight: 1.5,
+                }}
+              >
+                <input
+                  id="reg-terms"
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => {
+                    setAcceptedTerms(e.target.checked)
+                    if (e.target.checked) {
+                      setErrors((current) => ({ ...current, terms: undefined }))
+                    }
+                  }}
+                  aria-invalid={errors.terms ? 'true' : undefined}
+                  aria-describedby={errors.terms ? 'reg-terms-error' : undefined}
+                  style={{
+                    width: '16px',
+                    height: '16px',
+                    flex: '0 0 16px',
+                    margin: '2px 0 0',
+                    padding: 0,
+                  }}
+                />
+                <span>
+                  I have read and agree to the{' '}
+                  <Link to="/terms">Terms of Use</Link> and{' '}
+                  <Link to="/privacy">Privacy Notice</Link>.
+                </span>
+              </label>
+
+              {errors.terms && (
+                <p id="reg-terms-error" className="error" role="alert">
+                  {errors.terms}
+                </p>
+              )}
+            </div>
+
             <div className="field recaptcha-field">
               <label>Human verification</label>
               <div className="recaptcha-widget" ref={recaptcha.containerRef} />
@@ -289,10 +364,11 @@ export default function Register() {
 
             <button
               type="submit"
-              disabled={busy || !recaptcha.verified}
+              disabled={busy || !recaptcha.verified || !acceptedTerms}
             >
               {busy ? 'Creating account...' : 'Create account'}
             </button>
+
             <div className="recaptcha-disclosure">
               <small>
                 This site is protected by reCAPTCHA and the Google{' '}
@@ -315,8 +391,10 @@ export default function Register() {
                 display: 'flex',
                 justifyContent: 'center',
                 minHeight: '44px',
-                pointerEvents: busy || !recaptcha.verified ? 'none' : undefined,
-                opacity: busy || !recaptcha.verified ? 0.6 : 1,
+                pointerEvents:
+                  busy || !recaptcha.verified || !acceptedTerms ? 'none' : undefined,
+                opacity:
+                  busy || !recaptcha.verified || !acceptedTerms ? 0.6 : 1,
               }}
             />
           ) : (
@@ -340,4 +418,3 @@ export default function Register() {
     </div>
   )
 }
-

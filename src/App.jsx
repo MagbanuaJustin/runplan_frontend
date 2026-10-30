@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout.jsx'
 import ProtectedRoute, { AdminRoute } from './auth/ProtectedRoute.jsx'
 import Login from './pages/Login.jsx'
@@ -18,11 +18,20 @@ import SummaryReport from './pages/SummaryReport.jsx'
 import ReportProblem from './pages/ReportProblem.jsx'
 import MyReports from './pages/MyReports.jsx'
 import SupportConsole from './pages/SupportConsole.jsx'
+import DownloadPage from './pages/DownloadPage.jsx'
+import {
+  LandingPage,
+  PrivacyPage,
+  TermsPage,
+} from './pages/PublicPages.jsx'
 
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/terms" element={<TermsPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
+
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -38,6 +47,7 @@ export default function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/account" element={<Account />} />
           <Route path="/summary" element={<SummaryReport />} />
+          <Route path="/download" element={<DownloadPage />} />
           <Route path="/support/report" element={<ReportProblem />} />
           <Route path="/support/reports" element={<MyReports />} />
 
@@ -48,7 +58,10 @@ export default function App() {
         </Route>
       </Route>
 
-      <Route path="*" element={<ComingSoon title="Page not found" />} />
+      <Route
+        path="*"
+        element={<ComingSoon title="Page not found" />}
+      />
     </Routes>
   )
 }

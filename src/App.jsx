@@ -1,4 +1,5 @@
-import { Routes, Route } from 'react-router-dom'
+import { Capacitor } from '@capacitor/core'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout.jsx'
 import ProtectedRoute, { AdminRoute } from './auth/ProtectedRoute.jsx'
 import Login from './pages/Login.jsx'
@@ -25,17 +26,45 @@ import {
   TermsPage,
 } from './pages/PublicPages.jsx'
 
+const isNativeApp = Capacitor.isNativePlatform()
+
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<LandingPage />} />
+      <Route
+        path="/"
+        element={
+          isNativeApp
+            ? <Navigate to="/login" replace />
+            : <LandingPage />
+        }
+      />
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
 
       <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      <Route
+        path="/register"
+        element={
+          isNativeApp
+            ? <Navigate to="/login" replace />
+            : <Register />
+        }
+      />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+
+      {/* Private web download page, separate from the app dashboard layout. */}
+      <Route
+        path="/download"
+        element={
+          isNativeApp
+            ? <Navigate to="/dashboard" replace />
+            : <ProtectedRoute />
+        }
+      >
+        <Route index element={<DownloadPage />} />
+      </Route>
 
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
@@ -47,7 +76,6 @@ export default function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/account" element={<Account />} />
           <Route path="/summary" element={<SummaryReport />} />
-          <Route path="/download" element={<DownloadPage />} />
           <Route path="/support/report" element={<ReportProblem />} />
           <Route path="/support/reports" element={<MyReports />} />
 

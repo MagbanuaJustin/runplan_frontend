@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { Capacitor } from '@capacitor/core'
+import { LocalNotifications } from '@capacitor/local-notifications'
 import { apiGet, apiPost, apiPut } from '../api.js'
 import Field from '../components/Field.jsx'
 import ProfilePhoto from '../components/ProfilePhoto.jsx'
@@ -26,12 +28,22 @@ const empty = {
   target_race_date: '',
   available_days: [],
   desired_sessions_per_week: '',
-  preferred_time: '',
+  preferred_time: 'morning',
   baseline_distance_km: '',
   baseline_pace: '',
   location_label: '',
   latitude: '',
   longitude: '',
+}
+
+const IS_NATIVE_ANDROID = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android'
+const NATIVE_REMINDERS_KEY = 'runplan.native-run-reminders.v1'
+const RUNPLAN_NOTIFICATION_ID_BASE = 1_000_000_000
+const RUNPLAN_NOTIFICATION_ID_LIMIT = 2_000_000_000
+const PREFERRED_START_TIMES = {
+  morning: '06:30',
+  afternoon: '14:00',
+  evening: '18:30',
 }
 
 const numToText = (value) => (value === null || value === undefined ? '' : String(value))
@@ -55,11 +67,10 @@ function fromApi(p) {
       p.desired_sessions_per_week === null || p.desired_sessions_per_week === undefined
         ? ''
         : String(p.desired_sessions_per_week),
-    preferred_time: p.preferred_time ?? '',
+    // Older profiles without a saved training time use the default.
+    preferred_time: p.preferred_time || 'morning',
     baseline_distance_km: p.baseline_distance_km === null ? '' : String(p.baseline_distance_km),
     baseline_pace: p.baseline_pace_label ?? '',
-    // Phase 4: optional training location. Older backends do not send this
-    // block at all, so every read is defensive.
     location_label: p.location?.label ?? '',
     latitude: numToText(p.location?.latitude),
     longitude: numToText(p.location?.longitude),
@@ -71,35 +82,235 @@ function paceToSeconds(text) {
   return m ? Number(m[1]) * 60 + Number(m[2]) : null
 }
 
+function readNativeReminderPreferences() {
+  try {
+    const value = localStorage.getItem(NATIVE_REMINDERS_KEY)
+    return value ? JSON.parse(value) : null
+  } catch {
+    return null
+  }
+}
+
+function writeNativeReminderPreferences(preferences) {
+  localStorage.setItem(NATIVE_REMINDERS_KEY, JSON.stringify(preferences))
+}
+
+function notificationIdForSession(sessionId) {
+  const value = Number(sessionId)
+  if (!Number.isSafeInteger(value) || value < 0) return null
+  return RUNPLAN_NOTIFICATION_ID_BASE + (value % 1_000_000_000)
+}
+
+function getRunTimes(session, preferredTime, leadMinutes) {
+  const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(session.scheduled_date ?? ''))
+  const startTime = session.planned_start_time || PREFERRED_START_TIMES[preferredTime]
+  const timeMatch = /^(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(String(startTime ?? ''))
+
+  if (!dateMatch || !timeMatch) return null
+
+  const [, yearText, monthText, dayText] = dateMatch
+  const [, hourText, minuteText] = timeMatch
+  const year = Number(yearText)
+  const month = Number(monthText)
+  const day = Number(dayText)
+  const hour = Number(hourText)
+  const minute = Number(minuteText)
+
+  const runAt = new Date(year, month - 1, day, hour, minute, 0, 0)
+  if (
+    runAt.getFullYear() !== year ||
+    runAt.getMonth() !== month - 1 ||
+    runAt.getDate() !== day ||
+    hour > 23 ||
+    minute > 59
+  ) {
+    return null
+  }
+
+  const reminderAt = new Date(runAt.getTime() - Number(leadMinutes) * 60_000)
+  return { runAt, reminderAt }
+}
+
+function formatClock(date) {
+  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+}
+
+async function ensureLocalNotificationPermission(shouldRequest) {
+  let permission = await LocalNotifications.checkPermissions()
+
+  if (permission.display !== 'granted' && shouldRequest) {
+    permission = await LocalNotifications.requestPermissions()
+  }
+
+  if (permission.display !== 'granted') {
+    throw new Error('Allow notifications for RunPlan in Android settings, then try again.')
+  }
+}
+
+async function cancelRunPlanNotifications() {
+  const pending = await LocalNotifications.getPending()
+  const notifications = (pending.notifications ?? [])
+    .filter((item) =>
+      item.id >= RUNPLAN_NOTIFICATION_ID_BASE &&
+      item.id < RUNPLAN_NOTIFICATION_ID_LIMIT,
+    )
+    .map((item) => ({ id: item.id }))
+
+  if (notifications.length) {
+    await LocalNotifications.cancel({ notifications })
+  }
+}
+
+async function scheduleNativeRunReminders(sessions, leadMinutes, preferredTime, requestPermission) {
+  await ensureLocalNotificationPermission(requestPermission)
+
+  await LocalNotifications.createChannel({
+    id: 'runplan-run-reminders',
+    name: 'Run reminders',
+    description: 'Reminders before planned RunPlan workouts',
+    importance: 4,
+  })
+
+  const now = Date.now()
+  const today = new Date().toLocaleDateString('en-CA')
+  const futureSessions = sessions.filter(
+    (session) => session.status === 'planned' && session.scheduled_date >= today,
+  )
+
+  const notifications = []
+  let missingStartTime = 0
+  const usedIds = new Set()
+
+  for (const session of futureSessions) {
+    const id = notificationIdForSession(session.id)
+    if (id === null || usedIds.has(id)) continue
+    usedIds.add(id)
+
+    const times = getRunTimes(session, preferredTime, leadMinutes)
+    if (!times) {
+      missingStartTime += 1
+      continue
+    }
+    if (times.reminderAt.getTime() <= now) continue
+
+    const workoutType = String(session.type || 'run').replaceAll('_', ' ')
+    notifications.push({
+      id,
+      title: 'RunPlan run reminder',
+      body: `Your ${workoutType} workout starts at ${formatClock(times.runAt)}.`,
+      schedule: {
+        at: times.reminderAt,
+        allowWhileIdle: true,
+        isExactNotification: true,
+      },
+      channelId: 'runplan-run-reminders',
+      extra: { runplanReminder: true, sessionId: String(session.id) },
+    })
+  }
+
+  await cancelRunPlanNotifications()
+
+  let warning = false
+  if (notifications.length) {
+    const result = await LocalNotifications.schedule({ notifications })
+    warning = Boolean(result.warning)
+  }
+
+  return {
+    scheduled: notifications.length,
+    futurePlanned: futureSessions.length,
+    missingStartTime,
+    warning,
+  }
+}
+
 export default function Profile() {
   const [form, setForm] = useState(empty)
+  const [savedPreferredTime, setSavedPreferredTime] = useState('morning')
   const [state, setState] = useState('loading')
   const [errors, setErrors] = useState({})
   const [formError, setFormError] = useState('')
   const [saved, setSaved] = useState(false)
   const [busy, setBusy] = useState(false)
   const [reminders, setReminders] = useState({
-    enabled: false, lead_minutes: 60, timezone: browserTimezone(),
-    subscribed: false, push_ready: false, public_key: null,
+    enabled: false,
+    lead_minutes: 60,
+    timezone: browserTimezone(),
+    subscribed: false,
+    push_ready: false,
+    public_key: null,
   })
+  const [nativeRemindersLoaded, setNativeRemindersLoaded] = useState(!IS_NATIVE_ANDROID)
   const [remindersBusy, setRemindersBusy] = useState(false)
   const [remindersMessage, setRemindersMessage] = useState('')
 
   useEffect(() => {
     apiGet('/profile')
       .then((body) => {
-        if (body.data) setForm(fromApi(body.data))
+        if (body.data) {
+          const profile = fromApi(body.data)
+          setForm(profile)
+          setSavedPreferredTime(profile.preferred_time)
+        }
         setState('ready')
       })
       .catch(() => setState('error'))
   }, [])
 
   useEffect(() => {
+    if (IS_NATIVE_ANDROID) {
+      const savedPreferences = readNativeReminderPreferences()
+      if (savedPreferences) {
+        setReminders((current) => ({
+          ...current,
+          ...savedPreferences,
+          timezone: browserTimezone(),
+          subscribed: Boolean(savedPreferences.enabled),
+        }))
+      }
+      setNativeRemindersLoaded(true)
+      return
+    }
+
     const timezone = browserTimezone()
     apiGet(`/notifications/preferences?timezone=${encodeURIComponent(timezone)}`)
       .then((body) => setReminders((current) => ({ ...current, ...body.data })))
       .catch((err) => setRemindersMessage(err.message))
   }, [])
+
+  useEffect(() => {
+    if (!IS_NATIVE_ANDROID || !nativeRemindersLoaded || state !== 'ready') return
+
+    const savedPreferences = readNativeReminderPreferences()
+    if (!savedPreferences?.enabled) {
+      cancelRunPlanNotifications().catch(() => {})
+      return
+    }
+
+    let cancelled = false
+
+    async function refreshScheduledReminders() {
+      try {
+        const planBody = await apiGet('/plans/current')
+        const sessions = planBody?.data?.active?.sessions ?? []
+        const result = await scheduleNativeRunReminders(
+          sessions,
+          Number(savedPreferences.lead_minutes) || 60,
+          savedPreferredTime,
+          false,
+        )
+
+        if (!cancelled && result.warning) {
+          setRemindersMessage('Reminders are scheduled, but Android may deliver them a little late because exact alarms are not allowed.')
+        }
+      } catch (err) {
+        if (!cancelled) setRemindersMessage(err.message)
+      }
+    }
+
+    refreshScheduledReminders()
+    return () => { cancelled = true }
+  }, [nativeRemindersLoaded, state, savedPreferredTime])
 
   const change = (patch) => {
     setForm((f) => ({ ...f, ...patch }))
@@ -124,6 +335,11 @@ export default function Profile() {
     setFormError('')
     setSaved(false)
 
+    if (!TIMES.some(([value]) => value === form.preferred_time)) {
+      setErrors({ preferred_time: 'Choose your usual training time.' })
+      return
+    }
+
     let pace = null
     if (form.baseline_pace.trim() !== '') {
       pace = paceToSeconds(form.baseline_pace)
@@ -133,8 +349,6 @@ export default function Profile() {
       }
     }
 
-    // A location needs either a name or BOTH coordinates; half a coordinate is
-    // a typo, and the backend says so in the same words.
     const label = form.location_label.trim()
     const lat = form.latitude.trim()
     const lon = form.longitude.trim()
@@ -161,14 +375,16 @@ export default function Profile() {
         target_race_date: raceGoal ? form.target_race_date : null,
         available_days: form.available_days,
         desired_sessions_per_week: desired,
-        preferred_time: form.preferred_time || null,
+        preferred_time: form.preferred_time,
         baseline_distance_km: distance === '' ? null : distance,
         baseline_pace: pace,
         location_label: label === '' ? null : label,
         latitude: lat === '' ? null : lat,
         longitude: lon === '' ? null : lon,
       })
-      setForm(fromApi(body.data))
+      const profile = fromApi(body.data)
+      setForm(profile)
+      setSavedPreferredTime(profile.preferred_time)
       setSaved(true)
     } catch (err) {
       if (err.fields) setErrors(err.fields)
@@ -182,8 +398,71 @@ export default function Profile() {
     e.preventDefault()
     setRemindersMessage('')
     setRemindersBusy(true)
+
     try {
       const timezone = browserTimezone()
+
+      if (IS_NATIVE_ANDROID) {
+        if (reminders.enabled) {
+          const planBody = await apiGet('/plans/current')
+          const activePlan = planBody?.data?.active
+          const sessions = activePlan?.sessions ?? []
+          const result = await scheduleNativeRunReminders(
+            sessions,
+            Number(reminders.lead_minutes),
+            savedPreferredTime,
+            true,
+          )
+
+          const preferences = {
+            enabled: true,
+            lead_minutes: Number(reminders.lead_minutes),
+            timezone,
+          }
+          writeNativeReminderPreferences(preferences)
+          setReminders((current) => ({
+            ...current,
+            ...preferences,
+            subscribed: true,
+            push_ready: true,
+          }))
+
+          if (!activePlan) {
+            setRemindersMessage('Reminder settings are saved. Create an active plan to schedule run reminders.')
+          } else if (result.scheduled === 0 && result.futurePlanned === 0) {
+            setRemindersMessage('No upcoming planned runs were found. Reminders will be scheduled when your plan has future runs.')
+          } else if (result.scheduled === 0) {
+            setRemindersMessage('No reminders could be scheduled. Check your planned workout times.')
+          } else {
+            const countLabel = result.scheduled === 1 ? 'reminder' : 'reminders'
+            const skippedText = result.missingStartTime
+              ? ` ${result.missingStartTime} planned run(s) had no start time.`
+              : ''
+            const warningText = result.warning
+              ? ' Android may deliver reminders a little late because exact alarms are not allowed.'
+              : ''
+            setRemindersMessage(
+              `${result.scheduled} ${countLabel} scheduled on this phone, ${reminders.lead_minutes} minutes before each run.${skippedText}${warningText}`,
+            )
+          }
+        } else {
+          await cancelRunPlanNotifications()
+          const preferences = {
+            enabled: false,
+            lead_minutes: Number(reminders.lead_minutes),
+            timezone,
+          }
+          writeNativeReminderPreferences(preferences)
+          setReminders((current) => ({
+            ...current,
+            ...preferences,
+            subscribed: false,
+          }))
+          setRemindersMessage('Run reminders are off on this phone.')
+        }
+        return
+      }
+
       if (reminders.enabled) {
         if (!reminders.push_ready || !reminders.public_key) {
           throw new Error('Push reminders are not configured on the API server yet.')
@@ -227,7 +506,25 @@ export default function Profile() {
   async function turnOffReminders() {
     setRemindersBusy(true)
     setRemindersMessage('')
+
     try {
+      if (IS_NATIVE_ANDROID) {
+        await cancelRunPlanNotifications()
+        const preferences = {
+          enabled: false,
+          lead_minutes: Number(reminders.lead_minutes),
+          timezone: browserTimezone(),
+        }
+        writeNativeReminderPreferences(preferences)
+        setReminders((current) => ({
+          ...current,
+          ...preferences,
+          subscribed: false,
+        }))
+        setRemindersMessage('Run reminders are off on this phone.')
+        return
+      }
+
       const registration = await navigator.serviceWorker?.getRegistration('/')
       const subscription = await registration?.pushManager?.getSubscription()
       if (subscription) {
@@ -248,6 +545,29 @@ export default function Profile() {
 
   const raceGoal = form.goal !== '' && form.goal !== 'general_fitness'
   const today = new Date().toLocaleDateString('en-CA')
+  const reminderMessageIsSuccess =
+    remindersMessage.includes('scheduled') ||
+    remindersMessage.includes('settings are saved') ||
+    remindersMessage.includes('are off') ||
+    remindersMessage.includes('unsubscribed')
+
+  const trainingTimeField = (
+    <Field
+      id="pf-time"
+      label="Usual training time"
+      hint="RunPlan uses this as the default workout time. You can still adjust individual workouts."
+      error={errors.preferred_time}
+    >
+      <select
+        {...attrs('pf-time', 'preferred_time', true)}
+        value={form.preferred_time}
+        onChange={set('preferred_time')}
+        required
+      >
+        {TIMES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+      </select>
+    </Field>
+  )
 
   return (
     <>
@@ -307,14 +627,7 @@ export default function Profile() {
                   onChange={set('target_race_date')}
                 />
               </Field>
-            ) : (
-              <Field id="pf-time" label="Preferred time of day (optional)" error={errors.preferred_time}>
-                <select {...attrs('pf-time', 'preferred_time')} value={form.preferred_time} onChange={set('preferred_time')}>
-                  <option value="">No preference</option>
-                  {TIMES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                </select>
-              </Field>
-            )}
+            ) : trainingTimeField}
           </div>
 
           <fieldset className="fieldset" aria-describedby={errors.available_days ? 'pf-days-error' : undefined}>
@@ -351,14 +664,7 @@ export default function Profile() {
               </select>
             </Field>
 
-            {raceGoal && (
-              <Field id="pf-time" label="Preferred time of day (optional)" error={errors.preferred_time}>
-                <select {...attrs('pf-time', 'preferred_time')} value={form.preferred_time} onChange={set('preferred_time')}>
-                  <option value="">No preference</option>
-                  {TIMES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                </select>
-              </Field>
-            )}
+            {raceGoal && trainingTimeField}
           </div>
 
           <div className="form-grid-2">
@@ -387,8 +693,6 @@ export default function Profile() {
             </Field>
           </div>
 
-          {/* Phase 4: advisory weather lookup. Optional on purpose - the planner
-              and every other screen work exactly the same without it. */}
           <fieldset className="fieldset">
             <legend>Training location (optional, used for weather advisories)</legend>
             <Field
@@ -459,8 +763,9 @@ export default function Profile() {
           </span>
         </div>
         <p className="note">
-          Get a browser notification before each planned run. Run times use your preferred time above and your device timezone ({browserTimezone()}).
-          Reminders go to this browser/device, not to your login email.
+          {IS_NATIVE_ANDROID
+            ? `Get a phone notification before each planned run. Reminders are scheduled on this Android device and use its timezone (${browserTimezone()}). Opening this page refreshes reminders after plan changes.`
+            : `Get a browser notification before each planned run. Run times use your usual training time above and your device timezone (${browserTimezone()}). Reminders go to this browser/device, not to your login email.`}
         </p>
         <form className="form" onSubmit={saveReminderSettings}>
           <label className="day" style={{ display: 'inline-flex', width: 'fit-content' }}>
@@ -481,8 +786,14 @@ export default function Profile() {
               <option value="60">1 hour before</option>
             </select>
           </Field>
-          {remindersMessage && <p className={remindersMessage.includes('are on') || remindersMessage.includes('are off') || remindersMessage.includes('unsubscribed') ? 'success' : 'error'} role="status">{remindersMessage}</p>}
-          {!reminders.push_ready && <p className="note">The server administrator must configure Web Push before reminders can be enabled.</p>}
+          {remindersMessage && (
+            <p className={reminderMessageIsSuccess ? 'success' : 'error'} role="status">
+              {remindersMessage}
+            </p>
+          )}
+          {!IS_NATIVE_ANDROID && !reminders.push_ready && (
+            <p className="note">The server administrator must configure Web Push before reminders can be enabled.</p>
+          )}
           <div className="btn-row">
             <button type="submit" disabled={remindersBusy}>
               {remindersBusy ? 'Saving...' : 'Save reminder settings'}

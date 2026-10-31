@@ -423,7 +423,7 @@ export default function Plan() {
           {draftBrief?.text && (
             <div className="advisory-banner" style={{ marginBottom: 14 }}>
               <strong>
-                {draftBrief.provider_status === 'ok' ? 'Gemini AI coach:' : 'Coach overview:'}
+                {draftBrief.provider_status === 'ok' ? 'Groq AI coach:' : 'Coach overview:'}
               </strong>{' '}
               {draftBrief.text}
             </div>

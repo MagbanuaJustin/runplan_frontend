@@ -3,7 +3,7 @@ import { apiGet } from '../api.js'
 import { useAuth } from '../auth/AuthContext.jsx'
 
 const PROVIDER_LABELS = {
-  gemini: 'Google Gemini (AI plan & feedback)',
+  groq: 'Groq (AI plan, feedback & chat)',
   weather: 'OpenWeatherMap (weather advisories)',
   google_calendar: 'Google Calendar (workout sync)',
   push: 'Push reminders (Web Push / FCM)',

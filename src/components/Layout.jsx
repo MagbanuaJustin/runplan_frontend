@@ -178,6 +178,7 @@ const PAGE_TITLES = {
   '/profile': 'Runner Profile',
   '/account': 'Account & Security',
   '/status': 'System Status',
+  '/support': 'Support Console',
 }
 
 export default function Layout() {
@@ -231,7 +232,7 @@ export default function Layout() {
       .then((body) => {
         if (!active) return
 
-        const ready = Boolean(body?.data?.gemini?.ready)
+        const ready = Boolean(body?.data?.groq?.ready)
         setAiReady(ready)
         setAiStatus(ready ? 'Connected' : 'Not configured')
       })
@@ -395,6 +396,31 @@ export default function Layout() {
               ))}
             </div>
           ))}
+{user?.role === 'admin' && (
+  <div className="nav-group">
+    <span className="nav-group-label">Administration</span>
+    <NavLink
+      to="/support"
+      className="nav-link"
+      onClick={() => setMenuOpen(false)}
+    >
+      <svg
+        className="nav-icon"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
+        <path d="M8 10h8M8 14h5" />
+      </svg>
+      <span>Support Console</span>
+    </NavLink>
+  </div>
+)}
         </nav>
 
         <div className="sidebar-footer">
@@ -532,7 +558,7 @@ export default function Layout() {
 
           {!aiReady && (
             <p className="rp-ai-setup-note" role="status">
-              The AI coach is unavailable until Google Gemini is configured and enabled.
+              The AI coach is unavailable until Groq is configured and enabled.
             </p>
           )}
 
@@ -575,7 +601,7 @@ export default function Layout() {
             disabled={!aiReady || chatBusy}
           />
           <div className="rp-ai-composer-footer">
-            <small>Your question and selected training metrics are sent to Google Gemini; chat messages are not saved in RunPlan.</small>
+            <small>Your question and selected training metrics are sent to Groq; chat messages are not saved in RunPlan.</small>
             <button
               type="submit"
               className="btn"

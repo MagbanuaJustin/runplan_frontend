@@ -220,7 +220,7 @@ export default function Dashboard() {
   const [data, setData] = useState(null)
   const [state, setState] = useState('loading')
   const [chartTab, setChartTab] = useState('distance')
-  const [coaching, setCoaching] = useState({ feedback: null, gemini: null })
+  const [coaching, setCoaching] = useState({ feedback: null, groq: null })
   const [coachBusy, setCoachBusy] = useState(false)
   const [coachError, setCoachError] = useState('')
 
@@ -229,7 +229,7 @@ export default function Dashboard() {
     Promise.all([
       apiGet(`/dashboard?today=${today}`),
       apiGet('/ai/feedback').catch(() => ({
-        data: { feedback: null, gemini: null },
+        data: { feedback: null, groq: null },
       })),
     ])
       .then(([dash, ai]) => {
@@ -265,8 +265,8 @@ export default function Dashboard() {
   const next = plan?.next_session
   const latestRun = recent?.[0]
   const feedback = coaching?.feedback
-  const geminiReady = Boolean(coaching?.gemini?.ready)
-  const isLiveGemini = feedback?.provider_status === 'ok'
+  const groqReady = Boolean(coaching?.groq?.ready)
+  const isLiveGroq = feedback?.provider_status === 'ok'
 
   return (
     <>
@@ -565,11 +565,11 @@ export default function Dashboard() {
       <section className="plan-card" aria-labelledby="coach-title" style={{ marginTop: 14 }}>
         <div className="panel-head">
           <h2 id="coach-title">Weekly coaching review</h2>
-          <span className={`pill ${isLiveGemini ? 'pill-ok' : geminiReady ? '' : 'pill-muted'}`}>
-            {isLiveGemini
-              ? '\u2713 Gemini AI'
-              : geminiReady
-                ? 'Gemini AI ready'
+          <span className={`pill ${isLiveGroq ? 'pill-ok' : groqReady ? '' : 'pill-muted'}`}>
+            {isLiveGroq
+              ? '\u2713 Groq AI'
+              : groqReady
+                ? 'Groq AI ready'
                 : 'Rule-based coach'}
           </span>
         </div>
@@ -577,7 +577,7 @@ export default function Dashboard() {
         {!feedback ? (
           <p className="note">
             Generate a 7-day conditioning review from your manual runs and active plan adherence.
-            {!geminiReady && ' (Gemini is not configured or enabled in the backend .env, so RunPlan will use its built-in rule-based coach.)'}
+            {!groqReady && ' (Groq is not configured or enabled in the backend environment, so RunPlan will use its built-in rule-based coach.)'}
           </p>
         ) : (
           <>

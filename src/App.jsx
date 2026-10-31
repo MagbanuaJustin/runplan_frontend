@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout.jsx'
 import ProtectedRoute, { AdminRoute } from './auth/ProtectedRoute.jsx'
 import Login from './pages/Login.jsx'
+import AppLogin from './pages/AppLogin.jsx'
 import Register from './pages/Register.jsx'
 import ForgotPassword from './pages/ForgotPassword.jsx'
 import ResetPassword from './pages/ResetPassword.jsx'
@@ -42,7 +43,10 @@ export default function App() {
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
 
-      <Route path="/login" element={<Login />} />
+      <Route
+        path="/login"
+        element={isNativeApp ? <AppLogin /> : <Login />}
+      />
       <Route
         path="/register"
         element={
@@ -54,7 +58,6 @@ export default function App() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
 
-      {/* Private web download page, separate from the app dashboard layout. */}
       <Route
         path="/download"
         element={

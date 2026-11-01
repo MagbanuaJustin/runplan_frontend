@@ -8,6 +8,7 @@ import {
   readProfileAvatar,
 } from '../profileAvatar.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
+import LiveBackground from './LiveBackground.jsx'
 import PageContext from './PageContext.jsx'
 import { PageLoadingContext } from './PageLoading.jsx'
 
@@ -739,6 +740,8 @@ export default function Layout() {
       className={`app-frame ai-layout${aiOpen ? ' ai-open' : ' ai-closed'}`}
       style={{ '--rp-ai-width': `${aiWidth}px` }}
     >
+      <LiveBackground />
+
       {menuOpen && (
         <div
           className="sidebar-backdrop"

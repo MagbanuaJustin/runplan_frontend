@@ -121,16 +121,27 @@ body::after {
 }
 
 @keyframes aurora-drift {
-  from { transform: translate3d(-3%, -2%, 0) rotate(0deg) scale(1); }
-  to   { transform: translate3d(3%, 3%, 0) rotate(5deg) scale(1.08); }
+  from {
+    transform: translate3d(-3%, -2%, 0) rotate(0deg) scale(1);
+  }
+
+  to {
+    transform: translate3d(3%, 3%, 0) rotate(5deg) scale(1.08);
+  }
 }
 
 @keyframes aurora-drift-alt {
-  from { transform: translate3d(2%, 3%, 0) rotate(0deg) scale(1.05); }
-  to   { transform: translate3d(-3%, -2%, 0) rotate(-7deg) scale(1); }
+  from {
+    transform: translate3d(2%, 3%, 0) rotate(0deg) scale(1.05);
+  }
+
+  to {
+    transform: translate3d(-3%, -2%, 0) rotate(-7deg) scale(1);
+  }
 }
 
 @media (max-width: 920px) {
+
   /* one layer on phones keeps GPU work and battery use low */
   body::after {
     display: none;
@@ -583,13 +594,23 @@ body::after {
 }
 
 @keyframes page-loading-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes skeleton-shimmer {
-  from { background-position: 200% 0; }
-  to   { background-position: -200% 0; }
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -696,8 +717,15 @@ body::after {
 }
 
 @keyframes toast-in {
-  from { opacity: 0; transform: translateY(-8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 920px) {
@@ -716,8 +744,15 @@ body::after {
   }
 
   @keyframes toast-in {
-    from { opacity: 0; transform: translateY(8px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }
 
@@ -758,9 +793,17 @@ body::after {
 }
 
 @keyframes live-pulse {
-  0%   { box-shadow: 0 0 0 0 currentColor; }
-  70%  { box-shadow: 0 0 0 6px transparent; }
-  100% { box-shadow: 0 0 0 0 transparent; }
+  0% {
+    box-shadow: 0 0 0 0 currentColor;
+  }
+
+  70% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
 }
 
 .weather-location {
@@ -1088,4 +1131,12 @@ body::after {
   .kpi-card:hover {
     transform: none;
   }
+}
+
+.profile-photo-editor .profile-photo-copy h2 {
+  text-align: inherit;
+  align-self: auto;
+  margin-left: 0;
+  margin-right: 0;
+  width: 100%;
 }

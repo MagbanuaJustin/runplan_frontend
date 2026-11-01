@@ -35,6 +35,10 @@
   --danger-border: rgba(240, 138, 134, 0.32);
   --glow-hero: radial-gradient(ellipse 75% 65% at 22% 22%, rgba(110, 150, 230, 0.16), rgba(90, 130, 220, 0.04) 52%, transparent 75%);
   --shadow-card: 0 10px 28px rgba(0, 0, 0, 0.30);
+  /* aliases used by the support detail styles; they follow the active theme */
+  --panel: var(--bg-surface);
+  --muted: var(--text-muted);
+  --input: var(--bg-input);
   --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
@@ -71,6 +75,10 @@
   --danger-border: rgba(220, 38, 38, 0.28);
   --glow-hero: radial-gradient(ellipse 75% 65% at 22% 22%, rgba(37, 99, 235, 0.15), rgba(59, 130, 246, 0.04) 55%, transparent 78%);
   --shadow-card: 0 8px 24px rgba(15, 23, 42, 0.06);
+  /* aliases used by the support detail styles; they follow the active theme */
+  --panel: var(--bg-surface);
+  --muted: var(--text-muted);
+  --input: var(--bg-input);
 }
 
 *,
@@ -1890,6 +1898,7 @@ a.btn-secondary:hover {
     transition: none;
   }
 }
+
 .recaptcha-disclosure {
   margin-top: 10px;
   text-align: center;

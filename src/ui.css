@@ -1134,9 +1134,9 @@ body::after {
 }
 
 .profile-photo-editor .profile-photo-copy h2 {
-  text-align: inherit;
-  align-self: auto;
-  margin-left: 0;
-  margin-right: 0;
+  text-align: center;
+  align-self: center;
   width: 100%;
+  margin-left: auto;
+  margin-right: auto;
 }

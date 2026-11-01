@@ -23,6 +23,11 @@ const AI_SUGGESTIONS = [
   'Summarize my recent runs',
   'How has my pace changed?',
   'Am I training consistently?',
+  'Did I complete my planned workouts?',
+  'How hard were my runs this week?',
+  'Was my longest run too long?',
+  'Do I need a rest day?',
+  'Am I on track for my goal?',
 ]
 
 export function BrandLogo() {

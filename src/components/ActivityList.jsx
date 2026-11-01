@@ -3,6 +3,7 @@ import { apiGet, apiDelete } from '../api.js'
 import { formatDuration } from '../format.js'
 import ActivityForm from './ActivityForm.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
+import { useToast } from './Toast.jsx'
 
 const newestFirst = (a, b) =>
   b.activity_date.localeCompare(a.activity_date) || Number(b.id) - Number(a.id)
@@ -18,6 +19,7 @@ export default function ActivityList() {
   const [toDelete, setToDelete] = useState(null)
   const [busy, setBusy] = useState(false)
   const [deleteError, setDeleteError] = useState('')
+  const toast = useToast()
 
   useEffect(() => {
     const qs = new URLSearchParams()
@@ -72,8 +74,10 @@ export default function ActivityList() {
         list.filter((activity) => !sameId(activity.id, deletedId)),
       )
       setToDelete(null)
+      toast.success('Run deleted.')
     } catch (err) {
       setDeleteError(err.message)
+      toast.error(err.message || 'Could not delete this run.')
     } finally {
       setBusy(false)
     }
@@ -136,7 +140,6 @@ export default function ActivityList() {
             {hasFilter ? ' in selected range' : ''}.
           </p>
 
-          {deleteError && <p className="error" role="alert">{deleteError}</p>}
 
           <ul className="runs">
             {activities.map((activity) =>

@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Capacitor } from '@capacitor/core'
+import { SocialLogin } from '@capgo/capacitor-social-login'
 import { useAuth } from '../auth/AuthContext.jsx'
+import useRecaptcha from '../auth/useRecaptcha.js'
 import { BrandLogo, ThemeToggle } from '../components/Layout.jsx'
 
 const GOOGLE_SCRIPT_ID = 'runplan-google-identity-services'
 const GOOGLE_SCRIPT_URL = 'https://accounts.google.com/gsi/client'
+const DOWNLOAD_PATH = '/download'
+const PUBLIC_SITE_URL =
+  import.meta.env.VITE_PUBLIC_SITE_URL || 'https://runplan-frontend-livid.vercel.app'
 
 export default function Login() {
   const { status, login, loginWithGoogle } = useAuth()
@@ -12,6 +18,8 @@ export default function Login() {
   const location = useLocation()
   const googleButtonRef = useRef(null)
   const googleBusyRef = useRef(false)
+  const nativeGoogleInitRef = useRef(null)
+  const recaptcha = useRecaptcha()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -22,7 +30,10 @@ export default function Login() {
   const [googleSigningIn, setGoogleSigningIn] = useState(false)
 
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim()
-  const from = location.state?.from?.pathname ?? '/dashboard'
+  const isNative = Capacitor.isNativePlatform()
+  const isAndroid = Capacitor.getPlatform() === 'android'
+  const from = location.state?.from?.pathname ??
+    (isNative ? '/dashboard' : DOWNLOAD_PATH)
   const notice = location.state?.notice ?? ''
 
   useEffect(() => {
@@ -39,7 +50,77 @@ export default function Login() {
     setGoogleSigningIn(true)
     setBusy(true)
 
+    let recaptchaToken = ''
+
     try {
+      if (!isNative) {
+        recaptchaToken = recaptcha.getToken()
+      }
+
+      await loginWithGoogle(idToken, recaptchaToken || undefined)
+      navigate(from, { replace: true })
+    } catch (err) {
+      setError(err.message || 'Google sign-in failed. Please try again.')
+    } finally {
+      if (recaptchaToken) recaptcha.reset()
+      googleBusyRef.current = false
+      setGoogleSigningIn(false)
+      setBusy(false)
+    }
+  }, [loginWithGoogle, navigate, from, isNative, recaptcha])
+
+  const handleNativeGoogleSignIn = useCallback(async () => {
+    if (googleBusyRef.current) return
+
+    if (!isAndroid) {
+      setError('Native Google sign-in is configured for Android only.')
+      return
+    }
+
+    if (!clientId) {
+      setError('Google sign-in is not configured. Check VITE_GOOGLE_CLIENT_ID.')
+      return
+    }
+
+    googleBusyRef.current = true
+    setError('')
+    setGoogleLoadError('')
+    setGoogleSigningIn(true)
+    setBusy(true)
+
+    try {
+      let initialization = nativeGoogleInitRef.current
+
+      if (!initialization) {
+        initialization = SocialLogin.initialize({
+          google: {
+            webClientId: clientId,
+            mode: 'online',
+          },
+        })
+        nativeGoogleInitRef.current = initialization
+      }
+
+      try {
+        await initialization
+      } catch (err) {
+        if (nativeGoogleInitRef.current === initialization) {
+          nativeGoogleInitRef.current = null
+        }
+        throw err
+      }
+
+      const response = await SocialLogin.login({
+        provider: 'google',
+        options: {},
+      })
+
+      const idToken = response?.result?.idToken
+      if (!idToken) {
+        throw new Error('Google did not return an ID token. Please try again.')
+      }
+
+      // Native app sign-in does not use reCAPTCHA.
       await loginWithGoogle(idToken)
       navigate(from, { replace: true })
     } catch (err) {
@@ -49,9 +130,16 @@ export default function Login() {
       setGoogleSigningIn(false)
       setBusy(false)
     }
-  }, [loginWithGoogle, navigate, from])
+  }, [clientId, isAndroid, loginWithGoogle, navigate, from])
 
   useEffect(() => {
+    if (isNative) {
+      setGoogleLoadError(
+        isAndroid ? '' : 'Native Google sign-in is not configured for this platform.',
+      )
+      return undefined
+    }
+
     if (!clientId) {
       setGoogleLoadError(
         'Google sign-in is not configured. Check VITE_GOOGLE_CLIENT_ID in the frontend .env file.',
@@ -134,7 +222,7 @@ export default function Login() {
       script?.removeEventListener('load', renderGoogleButton)
       script?.removeEventListener('error', handleScriptError)
     }
-  }, [clientId, handleGoogleCredential])
+  }, [clientId, handleGoogleCredential, isNative, isAndroid])
 
   if (status === 'in') return <Navigate to={from} replace />
 
@@ -146,18 +234,28 @@ export default function Login() {
     setGoogleSigningIn(false)
     setBusy(true)
 
+    let recaptchaToken = ''
+
     try {
-      await login(email, password)
+      if (!isNative) {
+        if (!recaptcha.verified) {
+          throw new Error('Complete the human verification before signing in.')
+        }
+        recaptchaToken = recaptcha.getToken()
+      }
+
+      await login(email, password, recaptchaToken || undefined)
       navigate(from, { replace: true })
     } catch (err) {
       setError(err.message || 'Sign-in failed. Please try again.')
     } finally {
+      if (recaptchaToken) recaptcha.reset()
       setBusy(false)
     }
   }
 
   return (
-    <div className="auth-split">
+    <div className="auth-split auth-focused">
       <style>
         {`
           @keyframes runplan-login-spin {
@@ -182,34 +280,6 @@ export default function Login() {
         `}
       </style>
 
-      <section className="auth-hero" aria-label="About RunPlan AI">
-        <div>
-          <BrandLogo />
-        </div>
-
-        <div className="auth-hero-body">
-          <p className="auth-eyebrow">Adaptive Marathon Training Planner</p>
-          <h2 className="auth-hero-title">
-            See how every stride shapes race day.
-          </h2>
-          <p className="auth-hero-copy">
-            RunPlan builds validated weekly schedules around your goal and available days,
-            turning logged manual runs into pace history, adherence metrics, and safe plan revisions.
-          </p>
-          <svg className="auth-sparkline" viewBox="0 0 340 46" fill="none" aria-hidden="true">
-            <polyline
-              points="4,36 52,32 96,26 140,30 186,18 232,22 282,10 336,14"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </div>
-
-        <div className="auth-hero-foot">Plan &middot; Train &middot; Adapt</div>
-      </section>
-
       <main className="auth-panel">
         <div
           className="auth-panel-top"
@@ -221,24 +291,34 @@ export default function Login() {
             gap: '12px',
           }}
         >
-          <Link
-            to="/"
-            style={{
-              color: 'var(--accent-bright)',
-              fontSize: '13px',
-              fontWeight: 650,
-              textDecoration: 'none',
-            }}
-          >
-            ← Back to RunPlan
-          </Link>
+          {isNative ? (
+            <span aria-hidden="true" />
+          ) : (
+            <Link
+              to="/"
+              style={{
+                color: 'var(--accent-bright)',
+                fontSize: '13px',
+                fontWeight: 650,
+                textDecoration: 'none',
+              }}
+            >
+              ← Back to RunPlan
+            </Link>
+          )}
           <ThemeToggle />
+        </div>
+
+        <div className="auth-brand">
+          <BrandLogo />
         </div>
 
         <div className="auth-card" aria-busy={busy}>
           <h1>Sign in</h1>
           <p className="auth-subtitle">
-            Enter your runner account to open your training dashboard.
+            {isNative
+              ? 'Sign in with your RunPlan account to open the app.'
+              : 'Sign in to access the RunPlan APK download.'}
           </p>
 
           {notice && <p className="success" role="status">{notice}</p>}
@@ -311,15 +391,48 @@ export default function Login() {
               </div>
             </div>
 
+            {!isNative && (
+              <div className="field recaptcha-field">
+                <label>Human verification</label>
+                <div className="recaptcha-widget" ref={recaptcha.containerRef} />
+                {recaptcha.error ? (
+                  <p className="error" role="alert">{recaptcha.error}</p>
+                ) : (
+                  <small role="status">
+                    {!recaptcha.ready
+                      ? 'Loading secure verification…'
+                      : recaptcha.verified
+                        ? 'Verification complete.'
+                        : recaptcha.enabled
+                          ? 'Complete the checkbox to continue.'
+                          : 'Human verification is turned off (development).'}
+                  </small>
+                )}
+              </div>
+            )}
+
             {error && <p className="error" role="alert">{error}</p>}
 
-            <button type="submit" disabled={busy}>
+            <button
+              type="submit"
+              disabled={busy || (!isNative && !recaptcha.verified)}
+            >
               {busy
                 ? googleSigningIn
                   ? 'Google sign-in in progress…'
                   : 'Signing in…'
                 : 'Sign in'}
             </button>
+
+            {!isNative && (
+              <div className="recaptcha-disclosure">
+                <small>
+                  This site is protected by reCAPTCHA and the Google{' '}
+                  <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>{' '}
+                  and <a href="https://policies.google.com/terms" target="_blank" rel="noreferrer">Terms of Service</a> apply.
+                </small>
+              </div>
+            )}
           </form>
 
           <div style={{ marginTop: '18px' }} aria-busy={googleSigningIn}>
@@ -334,15 +447,57 @@ export default function Login() {
               Or continue with
             </p>
 
-            <div
-              ref={googleButtonRef}
-              style={{
-                display: busy ? 'none' : 'flex',
-                justifyContent: 'center',
-                minHeight: '40px',
-                pointerEvents: busy ? 'none' : 'auto',
-              }}
-            />
+            {isAndroid ? (
+              <button
+                type="button"
+                onClick={handleNativeGoogleSignIn}
+                disabled={busy || !clientId}
+                aria-label="Continue with Google"
+                style={{
+                  width: '100%',
+                  maxWidth: '400px',
+                  minHeight: '44px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '12px',
+                  margin: '0 auto',
+                  padding: '0 16px',
+                  border: '1px solid #dadce0',
+                  borderRadius: '4px',
+                  color: '#3c4043',
+                  background: '#fff',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: busy || !clientId ? 'not-allowed' : 'pointer',
+                  opacity: busy || !clientId ? 0.6 : 1,
+                }}
+              >
+                <span
+                  aria-hidden="true"
+                  style={{ color: '#4285f4', fontSize: '18px', fontWeight: 800 }}
+                >
+                  G
+                </span>
+                Continue with Google
+              </button>
+            ) : isNative ? (
+              <p className="error" role="status">
+                Native Google sign-in is not configured for this platform.
+              </p>
+            ) : (
+              <div
+                ref={googleButtonRef}
+                style={{
+                  display: busy ? 'none' : 'flex',
+                  justifyContent: 'center',
+                  minHeight: '40px',
+                  pointerEvents:
+                    busy || !recaptcha.verified ? 'none' : 'auto',
+                  opacity: busy || !recaptcha.verified ? 0.6 : 1,
+                }}
+              />
+            )}
 
             {googleLoadError && (
               <p className="error" role="status" style={{ marginTop: '10px' }}>
@@ -351,9 +506,18 @@ export default function Login() {
             )}
           </div>
 
-          <p className="auth-footer">
-            New here? <Link to="/register">Create an account</Link>
-          </p>
+          {isNative ? (
+            <p className="auth-footer">
+              Need an account?{' '}
+              <a href={`${PUBLIC_SITE_URL}/register`} target="_blank" rel="noreferrer">
+                Create one on the RunPlan website
+              </a>
+            </p>
+          ) : (
+            <p className="auth-footer">
+              New here? <Link to="/register">Create an account</Link>
+            </p>
+          )}
         </div>
       </main>
     </div>

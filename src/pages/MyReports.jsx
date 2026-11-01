@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { apiGet } from '../api.js'
+import PageLoading from '../components/PageLoading.jsx'
 
 const STATUS_LABELS = {
   open: 'Open',
@@ -10,7 +11,6 @@ const STATUS_LABELS = {
 }
 
 export default function MyReports() {
-  const location = useLocation()
   const [reports, setReports] = useState([])
   const [state, setState] = useState('loading')
 
@@ -34,10 +34,7 @@ export default function MyReports() {
         <Link className="btn" to="/support/report">Report a problem</Link>
       </div>
 
-      {location.state?.submitted && (
-        <p className="success-banner" role="status">Your report was submitted.</p>
-      )}
-      {state === 'loading' && <p role="status">Loading your reports...</p>}
+      {state === 'loading' && <PageLoading label="Loading your reports…" rows={2} />}
       {state === 'error' && <p className="error" role="alert">Could not load your reports.</p>}
 
       {state === 'ready' && reports.length === 0 && (

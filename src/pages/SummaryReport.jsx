@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiGet } from '../api.js'
 import { formatDuration } from '../format.js'
+import PageLoading from '../components/PageLoading.jsx'
 
 function paceLabel(seconds) {
   if (!Number.isFinite(Number(seconds)) || Number(seconds) <= 0) return '—'
@@ -78,7 +79,7 @@ export default function SummaryReport() {
       .catch(() => setState('error'))
   }, [])
 
-  if (state === 'loading') return <p role="status">Preparing your summary...</p>
+  if (state === 'loading') return <PageLoading label="Preparing your summary…" />
   if (state === 'error') return <p role="alert">Could not load your training summary.</p>
 
   const { last7, previous7, plan, recent = [] } = summary

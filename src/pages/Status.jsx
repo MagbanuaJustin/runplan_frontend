@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { apiGet } from '../api.js'
 import { useAuth } from '../auth/AuthContext.jsx'
+import PageLoading from '../components/PageLoading.jsx'
 
 const PROVIDER_LABELS = {
   groq: 'Groq (AI plan, feedback & chat)',
@@ -137,7 +138,7 @@ export default function Status() {
     }
   }, [])
 
-  if (state === 'loading') return <p role="status">Checking system status...</p>
+  if (state === 'loading') return <PageLoading label="Checking system status…" />
   if (state === 'error') return <p role="alert">Could not load system status.</p>
 
   const providers = integrations?.providers ?? {}

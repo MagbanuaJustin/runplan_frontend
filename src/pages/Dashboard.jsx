@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { apiGet, apiPost } from '../api.js'
 import { TYPE_LABELS, formatDate, formatDuration, formatLongDate, paceLabel } from '../format.js'
 import WeatherPanel from '../components/WeatherPanel.jsx'
+import PageLoading from '../components/PageLoading.jsx'
 
 const GOAL_LABELS = {
   '5k': '5K Race',
@@ -253,7 +254,7 @@ export default function Dashboard() {
     }
   }
 
-  if (state === 'loading') return <p role="status">Loading dashboard...</p>
+  if (state === 'loading') return <PageLoading label="Loading dashboard…" />
   if (state === 'error') return <p role="alert">Could not load your dashboard.</p>
 
   const { last7, previous7, plan, weeks, recent } = data

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiGet, apiPatch, apiPost } from '../api.js'
+import PageLoading from '../components/PageLoading.jsx'
 
 const TABS = ['Reports', 'System health', 'Users', 'Help guides', 'Alert rules', 'Activity', 'Data safety']
 const STATUS_LABELS = { open: 'Open', in_progress: 'In progress', resolved: 'Resolved', closed: 'Closed' }
@@ -211,7 +212,7 @@ export default function SupportConsole() {
     }
   }
 
-  if (state === 'loading') return <p role="status">Loading Support Console…</p>
+  if (state === 'loading') return <PageLoading label="Loading Support Console…" />
   if (state === 'error') return <><p className="error" role="alert">{error}</p><button className="btn" onClick={() => { setState('loading'); load().catch((err) => { setError(err.message); setState('error') }) }}>Try again</button></>
 
   const { totals, system, users, activity, data_safety: safety } = consoleData

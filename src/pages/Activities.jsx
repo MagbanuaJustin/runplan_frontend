@@ -4,6 +4,8 @@ import { apiGet } from '../api.js'
 import ActivityForm from '../components/ActivityForm.jsx'
 import ActivityList from '../components/ActivityList.jsx'
 import { TYPE_LABELS, formatLongDate } from '../format.js'
+import PageLoading from '../components/PageLoading.jsx'
+import { useToastOnChange } from '../components/Toast.jsx'
 
 export default function Activities() {
   const [params] = useSearchParams()
@@ -15,6 +17,7 @@ export default function Activities() {
   const [state, setState] = useState(sessionId ? 'loading' : 'none')
   const [resolvedSessionId, setResolvedSessionId] = useState(null)
   const [notice, setNotice] = useState('')
+  useToastOnChange(notice)
 
   useEffect(() => {
     if (!sessionId) {
@@ -67,7 +70,7 @@ export default function Activities() {
       : null
 
   if (sessionId && resolvedSessionId !== sessionId) {
-    return <p role="status">Loading session...</p>
+    return <PageLoading label="Loading session…" />
   }
 
   const today = new Date().toLocaleDateString('en-CA')
@@ -109,8 +112,6 @@ export default function Activities() {
             <h2 id="log-form-title">Record manual workout</h2>
             {selectedSession && <span className="pill">Linked session</span>}
           </div>
-
-          {notice && <p className="success" role="status">{notice}</p>}
 
           {state === 'invalid' && sessionId && (
             <p className="error" role="alert">

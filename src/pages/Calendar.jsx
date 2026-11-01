@@ -7,6 +7,8 @@ import {
   STATUS_LABELS, TYPE_LABELS, TYPE_SHORT,
   formatDuration, formatLongDate, monthGrid, paceLabel,
 } from '../format.js'
+import PageLoading from '../components/PageLoading.jsx'
+import { useToast, useToastOnChange } from '../components/Toast.jsx'
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const MARKS = { completed: '\u2713', skipped: '\u2715', missed: '!' }
@@ -45,6 +47,8 @@ export default function Calendar() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const toast = useToast()
+  useToastOnChange(notice)
   const [moving, setMoving] = useState(false)
   const [moveDate, setMoveDate] = useState('')
   const [skipping, setSkipping] = useState(false)
@@ -107,7 +111,9 @@ export default function Calendar() {
       setSkipReason('')
       setNotice(status === 'skipped' ? 'Run marked as skipped.' : 'Run restored to planned.')
     } catch (err) {
-      setError(err.fields?.skip_reason || err.message)
+      // Field problems stay beside the field; other failures become a toast.
+      if (err.fields?.skip_reason) setError(err.fields.skip_reason)
+      else toast.error(err.message || 'Could not update this run.')
     } finally {
       setBusy(false)
     }
@@ -141,13 +147,14 @@ export default function Calendar() {
       setMonth(monthOf(updated.scheduled_date))
       setNotice(`Moved ${TYPE_LABELS[updated.type].toLowerCase()} to ${formatLongDate(updated.scheduled_date)}.`)
     } catch (err) {
-      setError(err.fields?.scheduled_date || err.message)
+      if (err.fields?.scheduled_date) setError(err.fields.scheduled_date)
+      else toast.error(err.message || 'Could not move this run.')
     } finally {
       setBusy(false)
     }
   }
 
-  if (state === 'loading') return <p role="status">Loading calendar...</p>
+  if (state === 'loading') return <PageLoading label="Loading calendar…" />
   if (state === 'error') return <p role="alert">Could not load your calendar.</p>
   if (!data) {
     return (
@@ -185,7 +192,6 @@ export default function Calendar() {
     <>
       <h1>Calendar</h1>
       <CalendarSyncCard />
-      {notice && <p className="success" role="status">{notice}</p>}
 
       <div className="split-workspace">
         <section className="plan-card" aria-label="Monthly schedule">

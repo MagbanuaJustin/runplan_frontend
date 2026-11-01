@@ -4,6 +4,8 @@ import { LocalNotifications } from '@capacitor/local-notifications'
 import { apiGet, apiPost, apiPut } from '../api.js'
 import Field from '../components/Field.jsx'
 import ProfilePhoto from '../components/ProfilePhoto.jsx'
+import PageLoading from '../components/PageLoading.jsx'
+import { useToastOnChange } from '../components/Toast.jsx'
 
 const EXPERIENCE = [['beginner', 'Beginner'], ['intermediate', 'Intermediate'], ['advanced', 'Advanced']]
 const GOALS = [
@@ -231,6 +233,11 @@ export default function Profile() {
   const [errors, setErrors] = useState({})
   const [formError, setFormError] = useState('')
   const [saved, setSaved] = useState(false)
+  useToastOnChange(
+    saved
+      ? 'Profile saved. Propose a plan revision on the Plan page to apply schedule changes to an active plan.'
+      : '',
+  )
   const [busy, setBusy] = useState(false)
   const [reminders, setReminders] = useState({
     enabled: false,
@@ -540,7 +547,7 @@ export default function Profile() {
     }
   }
 
-  if (state === 'loading') return <p role="status">Loading profile...</p>
+  if (state === 'loading') return <PageLoading label="Loading profile…" />
   if (state === 'error') return <p role="alert">Could not load your profile.</p>
 
   const raceGoal = form.goal !== '' && form.goal !== 'general_fitness'
@@ -587,7 +594,6 @@ export default function Profile() {
           RunPlan uses these inputs to calculate weekly distance progression, workout start times, taper length, and target paces.
         </p>
 
-        {saved && <p className="success" role="status">Profile saved. Propose a plan revision on the Plan page to apply schedule changes to an active plan.</p>}
 
         <form className="form" onSubmit={handleSubmit} noValidate>
           <div className="form-grid-2">

@@ -2,12 +2,15 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiDownload } from '../api.js'
 import { useAuth } from '../auth/AuthContext.jsx'
+import { useToastOnChange } from '../components/Toast.jsx'
 
 export default function DownloadPage() {
   const { user } = useAuth()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+  useToastOnChange(message)
+  useToastOnChange(error, 'error')
 
   async function handleDownload() {
     if (busy) return
@@ -66,17 +69,6 @@ export default function DownloadPage() {
           {busy ? 'Preparing download…' : 'Download RunPlan APK'}
         </button>
 
-        {message && (
-          <p className="success" role="status">
-            {message}
-          </p>
-        )}
-
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
       </section>
 
       <p className="note">

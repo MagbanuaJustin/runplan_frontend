@@ -1,0 +1,1091 @@
+/* ==========================================================================
+   RunPlan UI layer
+   Shared tokens, buttons, spacing, navigation, loading, toasts, weather and
+   background effects. Loaded after index.css so it refines, not replaces, the
+   existing component styles.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Tokens
+   -------------------------------------------------------------------------- */
+:root {
+  /* spacing scale (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+
+  /* shape */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  /* controls */
+  --control-h: 42px;
+  --icon-btn: 40px;
+  --btn-danger-bg: #b83c38;
+  --btn-danger-hover: #9e302d;
+
+  /* layout */
+  --bottom-nav-h: 64px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+
+  /* focus + glow */
+  --focus-ring: 0 0 0 3px rgba(134, 174, 245, 0.32);
+  --glow-accent: 0 0 0 1px var(--border-accent), 0 6px 18px -6px rgba(110, 150, 230, 0.5);
+  --glow-soft: 0 0 0 1px var(--border-strong), 0 10px 26px -12px rgba(110, 150, 230, 0.4);
+
+  /* weather semantics */
+  --wx-rain: #78aef5;
+  --wx-heat: #f2b061;
+  --wx-wind: #7fd1c6;
+  --wx-sun: #f1cb62;
+  --wx-cloud: #a4b2ca;
+
+  /* background aurora */
+  --aurora-a: rgba(110, 150, 230, 0.11);
+  --aurora-b: rgba(150, 130, 226, 0.08);
+  --aurora-c: rgba(92, 200, 190, 0.06);
+}
+
+[data-theme="light"] {
+  --btn-danger-bg: #c93a37;
+  --btn-danger-hover: #a92f2d;
+  --focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.25);
+  --glow-accent: 0 0 0 1px var(--border-accent), 0 6px 16px -6px rgba(37, 99, 235, 0.4);
+  --glow-soft: 0 0 0 1px var(--border-strong), 0 10px 24px -12px rgba(37, 99, 235, 0.3);
+
+  --wx-rain: #1c5fc4;
+  --wx-heat: #b4520a;
+  --wx-wind: #0c7468;
+  --wx-sun: #a55a05;
+  --wx-cloud: #4a5a73;
+
+  --aurora-a: rgba(80, 130, 235, 0.13);
+  --aurora-b: rgba(140, 110, 230, 0.09);
+  --aurora-c: rgba(40, 170, 160, 0.08);
+}
+
+@media (pointer: coarse) {
+  :root {
+    --control-h: 46px;
+    --icon-btn: 44px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   2. Background: understated aurora / holographic wash
+   Two transform-animated gradient layers, behind everything, never
+   interactive. Static when reduced motion is requested.
+   -------------------------------------------------------------------------- */
+body {
+  position: relative;
+  isolation: isolate;
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  inset: -25%;
+  z-index: -1;
+  pointer-events: none;
+}
+
+body::before {
+  background:
+    radial-gradient(40% 36% at 22% 24%, var(--aurora-a), transparent 70%),
+    radial-gradient(36% 32% at 78% 18%, var(--aurora-b), transparent 70%),
+    radial-gradient(44% 38% at 62% 82%, var(--aurora-c), transparent 72%);
+  animation: aurora-drift 54s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+body::after {
+  background: conic-gradient(from 210deg at 72% 38%,
+      transparent 0deg,
+      var(--aurora-b) 70deg,
+      transparent 140deg,
+      var(--aurora-c) 230deg,
+      transparent 300deg);
+  opacity: 0.55;
+  animation: aurora-drift-alt 72s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes aurora-drift {
+  from { transform: translate3d(-3%, -2%, 0) rotate(0deg) scale(1); }
+  to   { transform: translate3d(3%, 3%, 0) rotate(5deg) scale(1.08); }
+}
+
+@keyframes aurora-drift-alt {
+  from { transform: translate3d(2%, 3%, 0) rotate(0deg) scale(1.05); }
+  to   { transform: translate3d(-3%, -2%, 0) rotate(-7deg) scale(1); }
+}
+
+@media (max-width: 920px) {
+  /* one layer on phones keeps GPU work and battery use low */
+  body::after {
+    display: none;
+  }
+}
+
+.workspace-header {
+  /* solid fallback first, then a slightly translucent surface */
+  background: var(--bg-canvas);
+  background: color-mix(in srgb, var(--bg-canvas) 88%, transparent);
+}
+
+/* --------------------------------------------------------------------------
+   3. Focus, hover glow and press feedback
+   Hover effects are limited to devices that can really hover so nothing
+   sticks on touch screens.
+   -------------------------------------------------------------------------- */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent-bright);
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}
+
+.btn,
+.form button[type="submit"],
+.theme-btn,
+.cal-btn,
+.logout-btn,
+.bottom-nav-link,
+.nav-link,
+.page-context-card,
+.kpi-card {
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.18s ease,
+    color 0.16s ease,
+    transform 0.16s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+
+  .btn:hover:not(:disabled):not([aria-disabled="true"]),
+  .form button[type="submit"]:hover:not(:disabled),
+  .theme-btn:hover:not(:disabled),
+  .cal-btn:hover:not(:disabled),
+  .logout-btn:hover {
+    box-shadow: var(--glow-accent);
+    transform: translateY(-1px);
+  }
+
+  .page-context-card:hover,
+  .kpi-card:hover {
+    border-color: var(--border-accent);
+    box-shadow: var(--glow-soft);
+    transform: translateY(-1px);
+  }
+
+  .nav-link:hover {
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+}
+
+.btn:active:not(:disabled),
+.form button[type="submit"]:active:not(:disabled),
+.theme-btn:active:not(:disabled),
+.cal-btn:active:not(:disabled),
+.logout-btn:active,
+.bottom-nav-link:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: none;
+}
+
+.plan-card:focus-within,
+.page-context-card:focus-within {
+  border-color: var(--border-accent);
+}
+
+/* --------------------------------------------------------------------------
+   4. Buttons: one sizing system
+   -------------------------------------------------------------------------- */
+.btn,
+.form button[type="submit"] {
+  height: auto;
+  min-height: var(--control-h);
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  text-decoration: none;
+}
+
+.btn svg,
+.form button[type="submit"] svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+
+.btn-secondary,
+.form .btn-secondary {
+  border: 1px solid var(--border-strong);
+}
+
+.btn-danger,
+.btn-danger:visited {
+  background: var(--btn-danger-bg);
+  color: #ffffff;
+  border: 1px solid transparent;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--btn-danger-hover);
+}
+
+.btn:disabled,
+.btn[aria-disabled="true"],
+.form button:disabled,
+.cal-btn:disabled,
+.theme-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* icon-only controls: always square, always tappable */
+.btn-icon,
+.theme-btn {
+  width: var(--icon-btn);
+  height: var(--icon-btn);
+  min-height: 0;
+  padding: 0;
+  border-radius: var(--radius-md);
+  flex: none;
+}
+
+.cal-btn {
+  min-width: var(--icon-btn);
+  height: var(--icon-btn);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.cal-today {
+  padding: 0 var(--space-4);
+}
+
+.logout-btn {
+  min-height: var(--control-h);
+  height: auto;
+  border-radius: var(--radius-md);
+}
+
+/* action groups: aligned, evenly gapped, same height, balanced widths */
+.btn-row,
+.form-actions,
+.support-form-actions,
+.dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--space-3);
+}
+
+.btn-row {
+  margin-top: var(--space-4);
+}
+
+.btn-row> :is(.btn, button),
+.form-actions> :is(.btn, button),
+.support-form-actions> :is(.btn, button) {
+  min-width: 8.5rem;
+}
+
+.dialog-actions {
+  justify-content: flex-end;
+}
+
+.dialog-actions .btn {
+  height: auto;
+  min-height: var(--control-h);
+  padding: var(--space-2) var(--space-5);
+  font-size: 14px;
+}
+
+@media (max-width: 520px) {
+
+  /* two balanced columns on phones; a lone button spans the row */
+  .btn-row> :is(.btn, button),
+  .form-actions> :is(.btn, button),
+  .support-form-actions> :is(.btn, button) {
+    flex: 1 1 9.5rem;
+    min-width: 0;
+  }
+
+  .dialog-actions .btn {
+    flex: 1 1 9rem;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   5. Spacing and card rhythm
+   -------------------------------------------------------------------------- */
+.form {
+  gap: var(--space-4);
+}
+
+.form-grid-2 {
+  gap: var(--space-4);
+}
+
+.plan-card,
+.panel {
+  padding: var(--space-5);
+  margin-bottom: var(--space-4);
+}
+
+.dash-grid-main,
+.dash-grid-two,
+.split-workspace {
+  gap: var(--space-4);
+}
+
+/* the contextual guidance cards used to sit flush against each other */
+.page-context-card+.page-context-card {
+  margin-top: var(--space-4);
+}
+
+.shell,
+.workspace-content {
+  min-width: 0;
+}
+
+@media (max-width: 540px) {
+
+  .plan-card,
+  .panel {
+    padding: var(--space-4);
+  }
+
+  .shell {
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   6. Header and navigation
+   -------------------------------------------------------------------------- */
+.rp-header-left {
+  min-width: 0;
+  flex: 1;
+}
+
+.workspace-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-more-title {
+  padding-top: var(--space-1);
+}
+
+.bottom-nav {
+  display: none;
+}
+
+@media (max-width: 920px) {
+  .workspace-header {
+    height: calc(58px + var(--safe-top));
+    padding-top: var(--safe-top);
+    padding-left: max(var(--space-4), var(--safe-left));
+    padding-right: max(var(--space-4), var(--safe-right));
+  }
+
+  .sidebar {
+    padding-top: calc(18px + var(--safe-top));
+    padding-bottom: calc(18px + var(--safe-bottom));
+    overscroll-behavior: contain;
+  }
+
+  .bottom-nav {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    background: var(--bg-sidebar);
+    border-top: 1px solid var(--border);
+    padding: 0 var(--safe-right) var(--safe-bottom) var(--safe-left);
+  }
+
+  .bottom-nav ul {
+    list-style: none;
+    margin: 0;
+    padding: var(--space-1) var(--space-2);
+    height: var(--bottom-nav-h);
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: var(--space-1);
+  }
+
+  .bottom-nav li {
+    min-width: 0;
+    display: flex;
+  }
+
+  .bottom-nav-link,
+  .bottom-nav-link:visited {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.1;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .bottom-nav-link:hover {
+    text-decoration: none;
+  }
+
+  .bottom-nav-link span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tab-icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  /* active: color, a heavier icon, a filled pill and a top marker, so state
+     is never conveyed by color alone */
+  .bottom-nav-link[aria-current="page"] {
+    color: var(--accent-bright);
+    background: var(--bg-active);
+  }
+
+  .bottom-nav-link[aria-current="page"] .tab-icon {
+    stroke-width: 2.5;
+  }
+
+  .bottom-nav-link[aria-current="page"]::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 22px;
+    height: 3px;
+    border-radius: 0 0 3px 3px;
+    background: var(--accent-bright);
+    transform: translateX(-50%);
+  }
+
+  /* keep every page clear of the fixed bar */
+  .workspace {
+    padding-bottom: calc(var(--bottom-nav-h) + var(--safe-bottom));
+  }
+
+  .rp-ai-composer {
+    padding-bottom: calc(var(--space-3) + var(--safe-bottom));
+  }
+}
+
+/* --------------------------------------------------------------------------
+   7. Page loading: a single, coherent screen
+   The skeleton fades in after a short delay so navigation that finishes at
+   once never flashes a loading state.
+   -------------------------------------------------------------------------- */
+.page-loading {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-2) 0;
+  animation: page-loading-in 0.2s ease 0.18s both;
+}
+
+.page-loading-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4);
+  align-content: center;
+}
+
+.page-loading-body {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.page-loading-label {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.skeleton {
+  display: block;
+  border-radius: var(--radius-md);
+  background: linear-gradient(90deg, var(--bg-surface) 25%, var(--bg-elevated) 50%, var(--bg-surface) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s linear infinite;
+}
+
+.skeleton-title {
+  height: 28px;
+  width: 46%;
+}
+
+.skeleton-line {
+  height: 14px;
+  width: 72%;
+}
+
+.skeleton-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+}
+
+.skeleton-card {
+  height: 112px;
+  border: 1px solid var(--border);
+}
+
+@keyframes page-loading-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes skeleton-shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+/* --------------------------------------------------------------------------
+   8. Toasts
+   -------------------------------------------------------------------------- */
+.toast-viewport {
+  position: fixed;
+  z-index: 90;
+  top: calc(var(--safe-top) + 66px);
+  right: max(var(--space-4), var(--safe-right));
+  width: min(380px, calc(100vw - 2 * var(--space-4)));
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+}
+
+.toast-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.toast-stack:not(:empty)+.toast-stack:not(:empty) {
+  margin-top: var(--space-2);
+}
+
+.toast {
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-2) var(--space-3) var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+  color: var(--text);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.34);
+  animation: toast-in 0.22s ease both;
+}
+
+.toast-message {
+  margin: 0;
+  padding-top: 2px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.toast-icon {
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+}
+
+.toast-close {
+  width: 36px;
+  height: 36px;
+  margin: -4px 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.toast-close:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.toast-success {
+  border-color: var(--success-border);
+  background: linear-gradient(var(--success-bg), var(--success-bg)), var(--bg-elevated);
+}
+
+.toast-success .toast-icon {
+  color: var(--success);
+}
+
+.toast-warning {
+  border-color: var(--warning-border);
+  background: linear-gradient(var(--warning-bg), var(--warning-bg)), var(--bg-elevated);
+}
+
+.toast-warning .toast-icon {
+  color: var(--warning);
+}
+
+.toast-error {
+  border-color: var(--danger-border);
+  background: linear-gradient(var(--danger-bg), var(--danger-bg)), var(--bg-elevated);
+}
+
+.toast-error .toast-icon {
+  color: var(--danger);
+}
+
+.toast-info .toast-icon {
+  color: var(--accent-bright);
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 920px) {
+
+  /* sit just above the bottom navigation, clear of the gesture area */
+  .toast-viewport {
+    top: auto;
+    bottom: calc(var(--safe-bottom) + var(--space-4));
+    left: max(var(--space-4), var(--safe-left));
+    right: max(var(--space-4), var(--safe-right));
+    width: auto;
+  }
+
+  body.has-bottom-nav .toast-viewport {
+    bottom: calc(var(--bottom-nav-h) + var(--safe-bottom) + var(--space-3));
+  }
+
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* --------------------------------------------------------------------------
+   9. Weather advisory
+   -------------------------------------------------------------------------- */
+.wx-icon {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+
+.weather-panel .panel-head h2 {
+  flex-wrap: nowrap;
+  gap: var(--space-2);
+}
+
+.wx-title-icon {
+  width: 24px;
+  height: 24px;
+  color: var(--wx-sun);
+}
+
+.weather-status {
+  gap: 6px;
+}
+
+.pill-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+.pill-dot.is-live {
+  animation: live-pulse 2.4s ease-out infinite;
+}
+
+@keyframes live-pulse {
+  0%   { box-shadow: 0 0 0 0 currentColor; }
+  70%  { box-shadow: 0 0 0 6px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+.weather-location {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 var(--space-1);
+  font-size: 14.5px;
+  color: var(--text);
+}
+
+.weather-location .wx-icon {
+  color: var(--accent-bright);
+}
+
+.weather-note {
+  margin: 0 0 var(--space-2);
+}
+
+.weather-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
+  align-items: stretch;
+  gap: var(--space-4);
+  margin: var(--space-3) 0 var(--space-4);
+}
+
+.weather-day {
+  --wx-tint: var(--wx-cloud);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-input);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--wx-tint) 12%, var(--bg-input)), var(--bg-input) 64%);
+}
+
+.weather-day.wx-rain,
+.weather-day.wx-storm {
+  --wx-tint: var(--wx-rain);
+}
+
+.weather-day.wx-sun,
+.weather-day.wx-partly {
+  --wx-tint: var(--wx-sun);
+}
+
+.weather-day.wx-fog,
+.weather-day.wx-snow,
+.weather-day.wx-cloud,
+.weather-day.wx-temp {
+  --wx-tint: var(--wx-cloud);
+}
+
+/* advisory level changes the border only; the card is never flooded with
+   an alarm color and the advice text carries the meaning */
+.weather-day.is-caution {
+  border-color: var(--border-accent);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--wx-tint) 12%, var(--bg-input)), var(--bg-input) 64%);
+}
+
+.weather-day.is-warn {
+  border-color: var(--warning-border);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--wx-tint) 12%, var(--bg-input)), var(--bg-input) 64%);
+}
+
+.weather-day-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.weather-date {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.weather-cond-icon {
+  width: 30px;
+  height: 30px;
+  color: var(--wx-tint);
+}
+
+.weather-temp {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.weather-temp .weather-min {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.weather-cond {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.weather-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.weather-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-hover);
+  color: var(--text);
+  font-size: 12.5px;
+}
+
+.wx-fact-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.weather-fact-rain .wx-fact-icon {
+  color: var(--wx-rain);
+}
+
+.weather-fact-wind .wx-fact-icon {
+  color: var(--wx-wind);
+}
+
+.weather-adv {
+  --adv: var(--warning);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: auto 0 0;
+  padding: var(--space-3);
+  border: 0;
+  border-left: 3px solid var(--adv);
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.weather-day>.weather-adv {
+  margin-top: auto;
+}
+
+.weather-adv strong,
+.weather-adv.caution strong {
+  color: var(--adv);
+}
+
+.weather-adv.caution {
+  border-left-color: var(--adv);
+}
+
+.wx-adv-icon {
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  color: var(--adv);
+}
+
+.weather-adv-rain {
+  --adv: var(--wx-rain);
+}
+
+.weather-adv-heat {
+  --adv: var(--wx-heat);
+}
+
+.weather-adv-wind {
+  --adv: var(--wx-wind);
+}
+
+.weather-adv-general {
+  --adv: var(--warning);
+}
+
+.weather-inline {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-4) 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+}
+
+.weather-inline-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+}
+
+.weather-inline-title .wx-icon {
+  color: var(--accent-bright);
+}
+
+.weather-inline-summary {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.weather-inline .weather-adv {
+  margin: 0;
+}
+
+.weather-skeleton-card {
+  height: 170px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+/* --------------------------------------------------------------------------
+   10. Focused sign-in (no promotional hero)
+   -------------------------------------------------------------------------- */
+.auth-focused {
+  grid-template-columns: 1fr;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.auth-focused .auth-hero {
+  display: none;
+}
+
+.auth-focused .auth-panel {
+  background: transparent;
+  justify-content: center;
+  padding:
+    calc(var(--space-8) + 40px + var(--safe-top)) var(--space-5) calc(var(--space-7) + var(--safe-bottom));
+}
+
+.auth-focused .auth-panel-top {
+  top: calc(var(--space-4) + var(--safe-top));
+  right: max(var(--space-5), var(--safe-right));
+}
+
+.auth-brand {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--space-6);
+}
+
+.auth-brand .brand {
+  gap: var(--space-3);
+  font-size: 24px;
+}
+
+.auth-brand .brand-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+}
+
+.auth-brand .brand-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.auth-focused .auth-card {
+  max-width: 420px;
+}
+
+.auth-alt {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.auth-alt-label {
+  margin: 0;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 420px) {
+  .auth-focused .auth-card {
+    padding: var(--space-5) var(--space-4);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   11. Reduced motion: keep the look, drop the movement
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+
+  body::before,
+  body::after {
+    animation: none !important;
+    will-change: auto;
+  }
+
+  .pill-dot.is-live,
+  .skeleton {
+    animation: none !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .toast {
+    animation-duration: 0.001ms !important;
+  }
+
+  .btn:hover:not(:disabled),
+  .theme-btn:hover:not(:disabled),
+  .cal-btn:hover:not(:disabled),
+  .page-context-card:hover,
+  .kpi-card:hover {
+    transform: none;
+  }
+}

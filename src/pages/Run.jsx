@@ -5,12 +5,16 @@ import 'leaflet/dist/leaflet.css'
 import { apiGet, apiPost } from '../api.js'
 import { TYPE_LABELS, formatLongDate } from '../format.js'
 import { watchLocation } from '../location.js'
+import PageLoading from '../components/PageLoading.jsx'
 
 const DEFAULT_CENTER = [12.8797, 121.774]
 const MAX_GPS_ACCURACY_METERS = 25
-const MAX_START_ACCURACY_METERS = 150
-const MIN_PACE_DISTANCE_KM = 0.1
-const MAX_GPS_SPEED_METERS_PER_SECOND = 8
+const MAX_START_ACCURACY_METERS = MAX_GPS_ACCURACY_METERS
+const MAX_RECORDING_ACCURACY_METERS = 50
+const MAX_RECORDING_GAP_SECONDS = 60
+const MAX_RECORDING_SPEED_METERS_PER_SECOND = 12
+const MIN_TRACKED_MOVEMENT_METERS = 1.5
+const MAX_TRACKED_NOISE_METERS = 8
 
 function distanceBetween(a, b) {
   const earthRadiusMeters = 6371000
@@ -40,17 +44,9 @@ function formatElapsed(totalSeconds) {
 }
 
 function formatPace(totalSeconds, distanceKm) {
-  if (!Number.isFinite(distanceKm) || distanceKm < MIN_PACE_DISTANCE_KM) {
-    return '--:--'
-  }
+  if (distanceKm <= 0) return '--:--'
 
   const secondsPerKm = Math.round(totalSeconds / distanceKm)
-
-  // Hide readings outside the pace limits accepted by the activity API.
-  if (secondsPerKm < 120 || secondsPerKm > 1500) {
-    return '--:--'
-  }
-
   const minutes = Math.floor(secondsPerKm / 60)
   const seconds = secondsPerKm % 60
 
@@ -180,6 +176,7 @@ export default function Run() {
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [plannedDistanceReached, setPlannedDistanceReached] = useState(false)
 
   const statusRef = useRef('idle')
   const currentPositionRef = useRef(null)
@@ -190,15 +187,6 @@ export default function Run() {
   const segmentStartedAtRef = useRef(null)
   const stopWatchingRef = useRef(null)
   const pendingResumeRef = useRef(false)
-
-  const plannedDistanceKm = linkedSession
-    ? Number(linkedSession.planned_distance_km)
-    : null
-  const hasPlannedDistance =
-    Number.isFinite(plannedDistanceKm) && plannedDistanceKm > 0
-  const linkedWorkoutComplete =
-    Boolean(linkedSession && hasPlannedDistance) &&
-    distanceRef.current >= plannedDistanceKm - 0.000001
 
   useEffect(() => {
     if (!sessionId) {
@@ -267,7 +255,7 @@ export default function Run() {
     setRouteSegments(nextSegments)
   }
 
-  function addRecordingPoint(point) {
+    function addRecordingPoint(point) {
     const previous = lastPointRef.current
 
     if (!previous) {
@@ -280,97 +268,87 @@ export default function Run() {
 
     if (seconds <= 0) return
 
-    if (seconds > 20) {
+    if (seconds > MAX_RECORDING_GAP_SECONDS) {
       startNewRouteSegment(point)
       return
     }
 
-    const averageAccuracy =
-      ((Number(previous.accuracy) || 0) + (Number(point.accuracy) || 0)) / 2
-    const minimumMovementMeters = Math.max(
-      1.5,
-      Math.min(averageAccuracy * 0.25, 5),
+    if (meters / seconds > MAX_RECORDING_SPEED_METERS_PER_SECOND) {
+      startNewRouteSegment(point)
+      return
+    }
+
+    // Keep the previous point as the anchor when movement is tiny,
+    // so several small GPS updates can add up to real progress.
+    const combinedAccuracy =
+      (Number(previous.accuracy) || 0) + (Number(point.accuracy) || 0)
+    const movementThreshold = Math.max(
+      MIN_TRACKED_MOVEMENT_METERS,
+      Math.min(MAX_TRACKED_NOISE_METERS, combinedAccuracy * 0.08),
     )
 
-    if (meters < minimumMovementMeters) {
-      lastPointRef.current = point
+    if (meters < movementThreshold) return
+
+    const plannedDistanceKm = Number(linkedSession?.planned_distance_km)
+    const hasPlannedDistance =
+      Number.isFinite(plannedDistanceKm) && plannedDistanceKm > 0
+    const plannedDistanceMeters = hasPlannedDistance
+      ? plannedDistanceKm * 1000
+      : Infinity
+    const remainingMeters =
+      plannedDistanceMeters - distanceRef.current * 1000
+
+    if (hasPlannedDistance && remainingMeters <= 0) {
+      distanceRef.current = plannedDistanceKm
+      setDistanceKm(plannedDistanceKm)
+      setPlannedDistanceReached(true)
+      pendingResumeRef.current = false
+      setResumeMode(false)
+      stopRecordingSegment('finished')
+      setError('')
       return
     }
 
-    if (meters / seconds > MAX_GPS_SPEED_METERS_PER_SECOND) return
+    const reachedTarget =
+      hasPlannedDistance && meters >= remainingMeters
+    const fraction = reachedTarget ? remainingMeters / meters : 1
+    const recordedPoint = reachedTarget
+      ? {
+          ...point,
+          latitude:
+            previous.latitude +
+            (point.latitude - previous.latitude) * fraction,
+          longitude:
+            previous.longitude +
+            (point.longitude - previous.longitude) * fraction,
+          timestamp:
+            previous.timestamp +
+            (point.timestamp - previous.timestamp) * fraction,
+        }
+      : point
+    const acceptedMeters = reachedTarget ? remainingMeters : meters
 
-    if (hasPlannedDistance) {
-      const remainingMeters =
-        (plannedDistanceKm - distanceRef.current) * 1000
-
-      if (remainingMeters <= 0.01) {
-        distanceRef.current = plannedDistanceKm
-        setDistanceKm(plannedDistanceKm)
-        stopRecordingSegment('finished')
-        return
-      }
-
-      const acceptedMeters = Math.min(meters, remainingMeters)
-      const reachesTarget =
-        distanceRef.current + acceptedMeters / 1000 >=
-        plannedDistanceKm - 0.000001
-      const ratio = acceptedMeters / meters
-
-      const recordedPoint =
-        ratio < 1
-          ? {
-              ...point,
-              latitude:
-                previous.latitude +
-                (point.latitude - previous.latitude) * ratio,
-              longitude:
-                previous.longitude +
-                (point.longitude - previous.longitude) * ratio,
-              timestamp:
-                previous.timestamp +
-                (point.timestamp - previous.timestamp) * ratio,
-            }
-          : point
-
-      distanceRef.current = reachesTarget
-        ? plannedDistanceKm
-        : distanceRef.current + acceptedMeters / 1000
-      lastPointRef.current = recordedPoint
-      setDistanceKm(distanceRef.current)
-
-      const nextSegments = [...routeSegmentsRef.current]
-      const lastIndex = nextSegments.length - 1
-
-      if (lastIndex >= 0) {
-        nextSegments[lastIndex] = [
-          ...nextSegments[lastIndex],
-          recordedPoint,
-        ]
-        routeSegmentsRef.current = nextSegments
-        setRouteSegments(nextSegments)
-      }
-
-      if (reachesTarget) {
-        setResumeMode(false)
-        pendingResumeRef.current = false
-        setError('')
-        stopRecordingSegment('finished')
-      }
-
-      return
-    }
-
-    lastPointRef.current = point
-    distanceRef.current += meters / 1000
+    lastPointRef.current = recordedPoint
+    distanceRef.current = reachedTarget
+      ? plannedDistanceKm
+      : distanceRef.current + acceptedMeters / 1000
     setDistanceKm(distanceRef.current)
 
     const nextSegments = [...routeSegmentsRef.current]
     const lastIndex = nextSegments.length - 1
 
     if (lastIndex >= 0) {
-      nextSegments[lastIndex] = [...nextSegments[lastIndex], point]
+      nextSegments[lastIndex] = [...nextSegments[lastIndex], recordedPoint]
       routeSegmentsRef.current = nextSegments
       setRouteSegments(nextSegments)
+    }
+
+    if (reachedTarget) {
+      setPlannedDistanceReached(true)
+      pendingResumeRef.current = false
+      setResumeMode(false)
+      stopRecordingSegment('finished')
+      setError('')
     }
   }
 
@@ -407,7 +385,7 @@ export default function Run() {
 
     if (
       statusRef.current === 'recording' &&
-      accuracy <= MAX_GPS_ACCURACY_METERS
+      accuracy <= MAX_RECORDING_ACCURACY_METERS
     ) {
       addRecordingPoint(point)
     }
@@ -439,6 +417,7 @@ export default function Run() {
     setDistanceKm(0)
     setElapsedSeconds(0)
     setSaved(false)
+    setPlannedDistanceReached(false)
   }
 
   function requestGps(isResume = false) {
@@ -481,12 +460,13 @@ export default function Run() {
       position.accuracy === null ||
       position.accuracy > MAX_START_ACCURACY_METERS
     ) {
-      setError('Wait for a usable GPS signal before starting.')
+      setError('Wait until GPS accuracy is 25 m or better before starting.')
       return
     }
 
     setError('')
     setSaved(false)
+    setPlannedDistanceReached(false)
 
     if (resumeMode) {
       if (position.accuracy <= MAX_GPS_ACCURACY_METERS) {
@@ -544,27 +524,8 @@ export default function Run() {
   }
 
   async function saveRun() {
-    const distanceToSaveKm =
-      Math.round((distanceRef.current + Number.EPSILON) * 100) / 100
-    const durationToSaveSeconds = Math.max(
-      1,
-      Math.floor(elapsedRef.current),
-    )
-
-    if (distanceToSaveKm < 0.01 || elapsedRef.current <= 0) {
-      setError(
-        'GPS has not recorded enough reliable distance to save yet. Wait for a stronger GPS track and record at least 0.01 km.',
-      )
-      return
-    }
-
-    const paceSecondsPerKm =
-      durationToSaveSeconds / distanceToSaveKm
-
-    if (paceSecondsPerKm < 120 || paceSecondsPerKm > 1500) {
-      setError(
-        'The GPS distance and time do not produce a valid running pace yet. Wait for a more reliable GPS track before saving.',
-      )
+    if (distanceRef.current <= 0 || elapsedRef.current <= 0) {
+      setError('Record some reliable distance before saving this run.')
       return
     }
 
@@ -574,15 +535,11 @@ export default function Run() {
     try {
       await apiPost('/activities', {
         activity_date: localDate(),
-        distance_km: distanceToSaveKm.toFixed(2),
-        duration_seconds: durationToSaveSeconds,
+        distance_km: distanceRef.current.toFixed(3),
+        duration_seconds: Math.max(1, Math.floor(elapsedRef.current)),
         effort: null,
-        notes: linkedSession && !linkedWorkoutComplete
-          ? 'Recorded with the RunPlan GPS tracker. Planned workout was not completed.'
-          : 'Recorded with the RunPlan GPS tracker.',
-        ...(linkedWorkoutComplete
-          ? { session_id: linkedSession.id }
-          : {}),
+        notes: 'Recorded with the RunPlan GPS tracker.',
+        ...(linkedSession ? { session_id: linkedSession.id } : {}),
       })
       setSaved(true)
     } catch (saveError) {
@@ -632,8 +589,8 @@ export default function Run() {
     paused: 'Paused',
     finished: saved
       ? 'Run saved'
-      : linkedWorkoutComplete
-        ? 'Planned distance reached'
+      : plannedDistanceReached
+        ? 'Planned distance complete'
         : 'Run finished',
   }[status]
 
@@ -643,7 +600,7 @@ export default function Run() {
       : elapsedSeconds
 
   if (sessionState === 'loading') {
-    return <p role="status">Loading planned workout…</p>
+    return <PageLoading label="Loading planned workout…" />
   }
 
   if (sessionState === 'invalid') {
@@ -665,8 +622,7 @@ export default function Run() {
             <span className="pill">Linked to calendar</span>
           </div>
           <p className="note" style={{ marginBottom: 0 }}>
-            {formatLongDate(linkedSession.scheduled_date)} · Planned distance:{' '}
-            {plannedDistanceKm} km · Recording stops automatically at this distance.
+            {formatLongDate(linkedSession.scheduled_date)} · Planned distance: {linkedSession.planned_distance_km} km
           </p>
         </section>
       )}
@@ -820,15 +776,15 @@ export default function Run() {
       <div className="run-toolbar">
         <div className="run-toolbar-copy">
           <p className="note">
-            Find your GPS location first. The timer starts only when you press Start run.
+            Wait for a precise GPS lock before starting. The timer and distance recording start together.
           </p>
 
           {currentPosition && gpsAccuracy !== null && (
             <p className="note run-location-note" role="status">
               {gpsAccuracy <= MAX_GPS_ACCURACY_METERS
-                ? `GPS ready · accuracy about ${Math.round(gpsAccuracy)} m`
+                ? `GPS lock ready · accuracy about ${Math.round(gpsAccuracy)} m`
                 : gpsAccuracy <= MAX_START_ACCURACY_METERS
-                  ? `Approximate location · ${Math.round(gpsAccuracy)} m accuracy. Start is available; distance tracking waits for a more accurate fix.`
+                  ? `Approximate location · ${Math.round(gpsAccuracy)} m accuracy. Wait for GPS accuracy of 25 m or better before starting.`
                   : `Location found · improving accuracy (${Math.round(gpsAccuracy)} m)`}
             </p>
           )}
@@ -873,6 +829,10 @@ export default function Run() {
               type="button"
               className="run-action run-action--primary"
               onClick={startRun}
+              disabled={
+                gpsAccuracy === null ||
+                gpsAccuracy > MAX_START_ACCURACY_METERS
+              }
             >
               <span className="run-action-icon"><ActionIcon name="play" /></span>
               {resumeMode ? 'Resume run' : 'Start run'}
@@ -1014,13 +974,17 @@ export default function Run() {
       </section>
 
       {error && <p className="error" role="alert">{error}</p>}
+      {plannedDistanceReached && !saved && (
+        <p className="note" role="status">
+          Planned distance reached. Recording has stopped. Save the run to log it and complete the calendar workout.
+        </p>
+      )}
+
       {saved && (
         <p className="note" role="status">
-          {linkedWorkoutComplete
+          {linkedSession
             ? 'Run saved and linked to this calendar workout. The workout is now marked complete.'
-            : linkedSession
-              ? 'Run saved to your activity history. The planned workout remains open because its target distance was not reached.'
-              : 'Run saved to your activity history.'}
+            : 'Run saved to your activity history.'}
         </p>
       )}
 

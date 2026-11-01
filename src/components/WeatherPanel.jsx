@@ -54,10 +54,134 @@ export function useWeather() {
   return { ...state, byDate, reload }
 }
 
-function Advisory({ note }) {
+/* ---------------------------------------------------------------------
+   Presentation helpers. Icons are chosen from the condition text the API
+   already returns; when the text is not recognised a neutral thermometer is
+   shown, so no condition is ever invented.
+--------------------------------------------------------------------- */
+
+function Icon({ children, className = 'wx-icon' }) {
   return (
-    <p className={`weather-adv ${note.level === 'caution' ? 'caution' : ''}`}>
-      <strong>{note.title}.</strong> {note.detail}
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {children}
+    </svg>
+  )
+}
+
+const CLOUD = 'M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 10.5a3.75 3.75 0 0 1-.25 7.5z'
+
+const GLYPHS = {
+  sun: (
+    <>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4" />
+    </>
+  ),
+  partly: (
+    <>
+      <path d="M8 5.2V3.5M3.6 7.6 2.4 6.4M2.5 12h1.7M13.2 6.6l1.2-1.2" />
+      <path d="M6.2 13.2a3.2 3.2 0 0 1 5.4-3.3" />
+      <path d="M9 20a3.6 3.6 0 0 1-.4-7.18A5 5 0 0 1 18.2 14a3 3 0 0 1-.2 6z" />
+    </>
+  ),
+  cloud: <path d={CLOUD} />,
+  rain: (
+    <>
+      <path d="M7 15a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 7.5 3.75 3.75 0 0 1 17.75 15" />
+      <path d="M8 18l-1 2.5M12 18l-1 2.5M16 18l-1 2.5" />
+    </>
+  ),
+  storm: (
+    <>
+      <path d="M7 15a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 7.5 3.75 3.75 0 0 1 17.75 15" />
+      <path d="m12.5 12-2.5 4h3l-2 4.5" />
+    </>
+  ),
+  snow: (
+    <>
+      <path d="M7 15a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 7.5 3.75 3.75 0 0 1 17.75 15" />
+      <path d="M8 18.5h.01M12 20h.01M16 18.5h.01" />
+    </>
+  ),
+  fog: (
+    <>
+      <path d="M7 13a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 5.5 3.75 3.75 0 0 1 17.75 13" />
+      <path d="M4 17h16M7 20.5h10" />
+    </>
+  ),
+  temp: (
+    <>
+      <path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z" />
+      <path d="M12 9v7" />
+    </>
+  ),
+  drop: <path d="M12 3s6 6.1 6 10.5a6 6 0 0 1-12 0C6 9.1 12 3 12 3z" />,
+  wind: (
+    <>
+      <path d="M3 8h10a2.5 2.5 0 1 0-2.5-2.5" />
+      <path d="M3 12h15a2.5 2.5 0 1 1-2.5 2.5" />
+      <path d="M3 16h7a2 2 0 1 1-2 2" />
+    </>
+  ),
+  pin: (
+    <>
+      <path d="M12 21s7-6.2 7-11.5a7 7 0 0 0-14 0C5 14.8 12 21 12 21z" />
+      <circle cx="12" cy="9.5" r="2.5" />
+    </>
+  ),
+  caution: (
+    <>
+      <path d="M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0z" />
+      <path d="M12 9v4M12 17h.01" />
+    </>
+  ),
+}
+
+function conditionKind(day) {
+  const label = String(day.condition_label ?? '').toLowerCase()
+
+  if (/thunder|storm/.test(label)) return 'storm'
+  if (/rain|drizzle|shower/.test(label)) return 'rain'
+  if (/snow|sleet|hail/.test(label)) return 'snow'
+  if (/fog|mist|haze/.test(label)) return 'fog'
+  if (/partly|mainly clear|mostly clear|few clouds/.test(label)) return 'partly'
+  if (/cloud|overcast/.test(label)) return 'cloud'
+  if (/clear|sun/.test(label)) return 'sun'
+  return 'temp'
+}
+
+function advisoryKind(note) {
+  const text = `${note.kind ?? ''} ${note.title ?? ''}`.toLowerCase()
+
+  if (/rain|storm|wet|shower/.test(text)) return 'rain'
+  if (/heat|warm|hot|temperature/.test(text)) return 'heat'
+  if (/wind|gust/.test(text)) return 'wind'
+  return 'general'
+}
+
+const ADVISORY_GLYPH = { rain: 'rain', heat: 'temp', wind: 'wind', general: 'caution' }
+
+function Advisory({ note }) {
+  const kind = advisoryKind(note)
+
+  return (
+    <p
+      className={`weather-adv weather-adv-${kind}${note.level === 'caution' ? ' caution' : ''}`}
+    >
+      <Icon className="wx-icon wx-adv-icon">{GLYPHS[ADVISORY_GLYPH[kind]]}</Icon>
+      <span>
+        <strong>{note.title}.</strong> {note.detail}
+      </span>
     </p>
   )
 }
@@ -66,21 +190,41 @@ function Advisory({ note }) {
 export function WeatherDay({ day, compact = false }) {
   const worst = day.advisories?.[0]
   const tone = worst?.level === 'warning' ? ' is-warn' : worst?.level === 'caution' ? ' is-caution' : ''
+  const kind = conditionKind(day)
+  const rainy = day.rain_probability > 0
 
   return (
-    <div className={`weather-day${tone}`}>
-      <span className="weather-date">{formatDate(day.date)}</span>
+    <div className={`weather-day wx-${kind}${tone}`}>
+      <div className="weather-day-top">
+        <span className="weather-date">{formatDate(day.date)}</span>
+        <Icon className="wx-icon weather-cond-icon">{GLYPHS[kind]}</Icon>
+      </div>
+
       <div className="weather-temp">
         {day.temp_max_c === null ? '—' : `${Math.round(day.temp_max_c)}°`}
         {day.temp_min_c !== null && (
           <span className="weather-min"> / {Math.round(day.temp_min_c)}°</span>
         )}
       </div>
-      <span className="weather-meta">{day.condition_label}</span>
-      <span className="weather-meta mono">
-        {day.rain_probability > 0 ? `${day.rain_probability}% rain` : 'No rain'}
-        {day.wind_max_kmh !== null ? ` · ${Math.round(day.wind_max_kmh)} km/h` : ''}
-      </span>
+
+      <span className="weather-cond">{day.condition_label}</span>
+
+      <div className="weather-facts">
+        <span className={`weather-fact${rainy ? ' weather-fact-rain' : ''}`}>
+          <Icon className="wx-icon wx-fact-icon">{GLYPHS.drop}</Icon>
+          <span className="mono">
+            {rainy ? `${day.rain_probability}% rain` : 'No rain'}
+          </span>
+        </span>
+
+        {day.wind_max_kmh !== null && (
+          <span className="weather-fact weather-fact-wind">
+            <Icon className="wx-icon wx-fact-icon">{GLYPHS.wind}</Icon>
+            <span className="mono">{Math.round(day.wind_max_kmh)} km/h</span>
+          </span>
+        )}
+      </div>
+
       {!compact && worst && <Advisory note={worst} />}
     </div>
   )
@@ -95,11 +239,24 @@ export function WeatherDayNotes({ day }) {
 
   return (
     <div className="weather-inline">
-      <strong>Weather advisory</strong>{' '}
-      <span className="mono">{day.summary}</span>
+      <strong className="weather-inline-title">
+        <Icon className="wx-icon wx-fact-icon">{GLYPHS[conditionKind(day)]}</Icon>
+        Weather advisory
+      </strong>
+      <span className="mono weather-inline-summary">{day.summary}</span>
       {day.advisories?.length
         ? day.advisories.map((note) => <Advisory key={note.kind + note.level} note={note} />)
         : <span className="weather-meta"> · No heat, rain or wind concerns for this day.</span>}
+    </div>
+  )
+}
+
+function WeatherSkeleton() {
+  return (
+    <div className="weather-strip" aria-hidden="true">
+      {[0, 1, 2].map((index) => (
+        <span key={index} className="skeleton weather-skeleton-card" />
+      ))}
     </div>
   )
 }
@@ -110,18 +267,27 @@ export default function WeatherPanel() {
 
   if (loading && !data) {
     return (
-      <section className="plan-card" aria-labelledby="weather-title">
-        <div className="panel-head"><h2 id="weather-title">Weather advisory</h2></div>
-        <p className="note" role="status" style={{ margin: 0 }}>Loading forecast...</p>
+      <section className="plan-card weather-panel" aria-labelledby="weather-title" aria-busy="true">
+        <div className="panel-head">
+          <h2 id="weather-title">
+            <Icon className="wx-icon wx-title-icon">{GLYPHS.partly}</Icon>
+            Weather advisory
+          </h2>
+        </div>
+        <p className="sr-only" role="status">Loading forecast…</p>
+        <WeatherSkeleton />
       </section>
     )
   }
 
   if (error) {
     return (
-      <section className="plan-card" aria-labelledby="weather-title">
+      <section className="plan-card weather-panel" aria-labelledby="weather-title">
         <div className="panel-head">
-          <h2 id="weather-title">Weather advisory</h2>
+          <h2 id="weather-title">
+            <Icon className="wx-icon wx-title-icon">{GLYPHS.partly}</Icon>
+            Weather advisory
+          </h2>
           <span className="pill pill-warn">Unavailable</span>
         </div>
         <p className="note" style={{ margin: 0 }}>
@@ -136,20 +302,27 @@ export default function WeatherPanel() {
   const hasDays = days.length > 0
 
   return (
-    <section className="plan-card" aria-labelledby="weather-title">
+    <section className="plan-card weather-panel" aria-labelledby="weather-title">
       <div className="panel-head">
-        <h2 id="weather-title">Weather advisory</h2>
-        <span className={`pill ${STATE_TONE[status] ?? 'pill-muted'}`}>
+        <h2 id="weather-title">
+          <Icon className="wx-icon wx-title-icon">{GLYPHS.partly}</Icon>
+          Weather advisory
+        </h2>
+        <span className={`pill weather-status ${STATE_TONE[status] ?? 'pill-muted'}`}>
+          <span className={`pill-dot${status === 'ok' ? ' is-live' : ''}`} aria-hidden="true" />
           {STATE_LABEL[status] ?? 'Weather'}
         </span>
       </div>
 
-      <p className="note" style={{ marginTop: 0 }}>
-        {data?.location?.label ? (
-          <>
-            Advisory conditions for <strong>{data.location.label}</strong>.{' '}
-          </>
-        ) : null}
+      {data?.location?.label ? (
+        <p className="weather-location">
+          <Icon className="wx-icon wx-fact-icon">{GLYPHS.pin}</Icon>
+          <span className="sr-only">Advisory conditions for </span>
+          <strong>{data.location.label}</strong>
+        </p>
+      ) : null}
+
+      <p className="note weather-note">
         Weather never changes your schedule; it only tells you what to expect.
       </p>
 

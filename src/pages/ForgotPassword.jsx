@@ -1,12 +1,83 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
+import { Capacitor } from '@capacitor/core'
 import { apiPost } from '../api.js'
 import { useAuth } from '../auth/AuthContext.jsx'
 import useRecaptcha from '../auth/useRecaptcha.js'
 import { BrandLogo, ThemeToggle } from '../components/Layout.jsx'
 import Field from '../components/Field.jsx'
 
+const PUBLIC_SITE_URL =
+  import.meta.env.VITE_PUBLIC_SITE_URL || 'https://runplan-frontend-livid.vercel.app'
+
 export default function ForgotPassword() {
+  return Capacitor.isNativePlatform()
+    ? <NativeForgotPassword />
+    : <WebForgotPassword />
+}
+
+function NativeForgotPassword() {
+  const { status } = useAuth()
+
+  useEffect(() => {
+    document.documentElement.dataset.theme =
+      localStorage.getItem('rp_theme') || 'dark'
+  }, [])
+
+  if (status === 'in') return <Navigate to="/dashboard" replace />
+
+  return (
+    <div className="auth-split">
+      <section className="auth-hero" aria-label="Account Recovery">
+        <div>
+          <BrandLogo />
+        </div>
+
+        <div className="auth-hero-body">
+          <p className="auth-eyebrow">Account Recovery</p>
+          <h2 className="auth-hero-title">
+            Get back to your training block safely.
+          </h2>
+          <p className="auth-hero-copy">
+            Open the RunPlan website to request a password reset. The recovery
+            form and human verification are handled there.
+          </p>
+        </div>
+
+        <div className="auth-hero-foot">Plan &middot; Train &middot; Adapt</div>
+      </section>
+
+      <main className="auth-panel">
+        <div className="auth-panel-top">
+          <ThemeToggle />
+        </div>
+
+        <div className="auth-card">
+          <h1>Password recovery</h1>
+          <p className="auth-subtitle">
+            Request a password reset through the RunPlan website.
+          </p>
+
+          <a
+            className="btn btn-primary"
+            href={`${PUBLIC_SITE_URL}/forgot-password`}
+            target="_blank"
+            rel="noreferrer"
+            style={{ width: '100%', textAlign: 'center' }}
+          >
+            Open website recovery
+          </a>
+
+          <p className="auth-footer">
+            <Link to="/login">Back to sign in</Link>
+          </p>
+        </div>
+      </main>
+    </div>
+  )
+}
+
+function WebForgotPassword() {
   const { status } = useAuth()
   const recaptcha = useRecaptcha()
   const [email, setEmail] = useState('')
@@ -16,7 +87,8 @@ export default function ForgotPassword() {
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    document.documentElement.dataset.theme = localStorage.getItem('rp_theme') || 'dark'
+    document.documentElement.dataset.theme =
+      localStorage.getItem('rp_theme') || 'dark'
   }, [])
 
   if (status === 'in') return <Navigate to="/dashboard" replace />
@@ -27,8 +99,11 @@ export default function ForgotPassword() {
     setError('')
     setResult(null)
     setBusy(true)
+
+    let recaptchaToken = ''
+
     try {
-      const recaptchaToken = recaptcha.getToken()
+      recaptchaToken = recaptcha.getToken()
       const body = await apiPost('/auth/forgot-password', {
         email: email.trim(),
         recaptcha_token: recaptchaToken,
@@ -41,7 +116,7 @@ export default function ForgotPassword() {
         setError(err.message)
       }
     } finally {
-      recaptcha.reset()
+      if (recaptchaToken) recaptcha.reset()
       setBusy(false)
     }
   }
@@ -59,10 +134,16 @@ export default function ForgotPassword() {
             Get back to your training block safely.
           </h2>
           <p className="auth-hero-copy">
-            Password reset links are single-use, HMAC-hashed in storage, and expire after 30 minutes.
-            Completing a reset automatically revokes any older signed-in sessions.
+            Password reset links are single-use, HMAC-hashed in storage, and
+            expire after 30 minutes. Completing a reset automatically revokes
+            any older signed-in sessions.
           </p>
-          <svg className="auth-sparkline" viewBox="0 0 340 46" fill="none" aria-hidden="true">
+          <svg
+            className="auth-sparkline"
+            viewBox="0 0 340 46"
+            fill="none"
+            aria-hidden="true"
+          >
             <polyline
               points="4,36 52,32 96,26 140,30 186,18 232,22 282,10 336,14"
               stroke="currentColor"
@@ -84,7 +165,8 @@ export default function ForgotPassword() {
         <div className="auth-card">
           <h1>Reset password</h1>
           <p className="auth-subtitle">
-            Enter the email address for your RunPlan account and we&apos;ll generate a recovery link.
+            Enter the email address for your RunPlan account and we&apos;ll
+            generate a recovery link.
           </p>
 
           {result ? (
@@ -93,9 +175,15 @@ export default function ForgotPassword() {
 
               {result.dev_reset?.reset_path && (
                 <div className="advisory-banner" style={{ marginBottom: '14px' }}>
-                  <strong>Local Dev Preview:</strong> Email delivery is not attached in local mode, so you can test the reset link directly ({result.dev_reset.expires_in_minutes} min expiry):
+                  <strong>Local Dev Preview:</strong> Email delivery is not
+                  attached in local mode, so you can test the reset link
+                  directly ({result.dev_reset.expires_in_minutes} min expiry):
                   <div className="btn-row" style={{ marginTop: '10px' }}>
-                    <Link className="btn btn-primary" to={result.dev_reset.reset_path} style={{ width: '100%' }}>
+                    <Link
+                      className="btn btn-primary"
+                      to={result.dev_reset.reset_path}
+                      style={{ width: '100%' }}
+                    >
                       Open reset password form
                     </Link>
                   </div>
@@ -106,7 +194,10 @@ export default function ForgotPassword() {
                 type="button"
                 className="btn btn-secondary"
                 style={{ width: '100%' }}
-                onClick={() => { setResult(null); setEmail('') }}
+                onClick={() => {
+                  setResult(null)
+                  setEmail('')
+                }}
               >
                 Send another link
               </button>
@@ -133,21 +224,39 @@ export default function ForgotPassword() {
                 ) : !recaptcha.ready ? (
                   <small role="status">Loading secure verification…</small>
                 ) : recaptcha.verified ? (
-                  <small className="recaptcha-success" role="status">Verification complete.</small>
+                  <small className="recaptcha-success" role="status">
+                    Verification complete.
+                  </small>
                 ) : (
                   <small role="status">Complete the checkbox to continue.</small>
                 )}
               </div>
 
               {error && <p className="error" role="alert">{error}</p>}
+
               <button type="submit" disabled={busy || !recaptcha.verified}>
                 {busy ? 'Generating link...' : 'Send recovery link'}
               </button>
+
               <div className="recaptcha-disclosure">
                 <small>
                   This site is protected by reCAPTCHA and the Google{' '}
-                  <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>{' '}
-                  and <a href="https://policies.google.com/terms" target="_blank" rel="noreferrer">Terms of Service</a> apply.
+                  <a
+                    href="https://policies.google.com/privacy"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Privacy Policy
+                  </a>{' '}
+                  and{' '}
+                  <a
+                    href="https://policies.google.com/terms"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Terms of Service
+                  </a>{' '}
+                  apply.
                 </small>
               </div>
             </form>

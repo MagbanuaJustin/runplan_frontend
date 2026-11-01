@@ -1,37 +1,40 @@
-/* RunPlan AI — Deep Navy & Electric Blue Design System */
+/* RunPlan AI design system. Shared tokens, buttons, spacing and motion live in ui.css. */
+/* Dark theme: softened charcoal surfaces with a restrained navy undertone.
+   Bright blue is reserved for primary actions, active states, focus and links;
+   green / amber / red appear only where they communicate status. */
 :root,
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg-canvas: #060a12;
-  --bg-hero: #081224;
-  --bg-sidebar: #070d18;
-  --bg-surface: #0c1424;
-  --bg-elevated: #101b30;
-  --bg-input: #080e1a;
-  --bg-hover: rgba(59, 130, 246, 0.08);
-  --bg-active: rgba(59, 130, 246, 0.14);
-  --border: #192841;
-  --border-strong: #253b5e;
-  --border-accent: rgba(96, 165, 250, 0.38);
-  --text: #edf2fb;
-  --text-secondary: #9fb0cc;
-  --text-muted: #667896;
-  --accent: #3b82f6;
-  --accent-hover: #2563eb;
-  --accent-bright: #60a5fa;
+  --bg-canvas: #0d1017;
+  --bg-hero: #11151d;
+  --bg-sidebar: #0f131a;
+  --bg-surface: #151a23;
+  --bg-elevated: #1b212c;
+  --bg-input: #10141b;
+  --bg-hover: rgba(122, 162, 235, 0.08);
+  --bg-active: rgba(122, 162, 235, 0.14);
+  --border: #252c39;
+  --border-strong: #343e50;
+  --border-accent: rgba(132, 174, 247, 0.34);
+  --text: #e8ebf1;
+  --text-secondary: #aab3c4;
+  --text-muted: #8791a6;
+  --accent: #3d72d8;
+  --accent-hover: #3563bf;
+  --accent-bright: #86aef5;
   --accent-fg: #ffffff;
-  --link: #60a5fa;
-  --success: #34d399;
-  --success-bg: rgba(16, 185, 129, 0.12);
-  --success-border: rgba(52, 211, 153, 0.32);
-  --warning: #fbbf24;
-  --warning-bg: rgba(245, 158, 11, 0.12);
-  --warning-border: rgba(251, 191, 36, 0.34);
-  --danger: #f87171;
-  --danger-bg: rgba(239, 68, 68, 0.13);
-  --danger-border: rgba(248, 113, 113, 0.35);
-  --glow-hero: radial-gradient(ellipse 75% 65% at 22% 22%, rgba(59, 130, 246, 0.22), rgba(14, 116, 244, 0.05) 52%, transparent 75%);
-  --shadow-card: 0 12px 32px rgba(0, 0, 0, 0.35);
+  --link: #86aef5;
+  --success: #62cba5;
+  --success-bg: rgba(72, 187, 148, 0.11);
+  --success-border: rgba(98, 203, 165, 0.30);
+  --warning: #e8bd5a;
+  --warning-bg: rgba(226, 178, 66, 0.11);
+  --warning-border: rgba(232, 189, 90, 0.30);
+  --danger: #f08a86;
+  --danger-bg: rgba(232, 108, 104, 0.12);
+  --danger-border: rgba(240, 138, 134, 0.32);
+  --glow-hero: radial-gradient(ellipse 75% 65% at 22% 22%, rgba(110, 150, 230, 0.16), rgba(90, 130, 220, 0.04) 52%, transparent 75%);
+  --shadow-card: 0 10px 28px rgba(0, 0, 0, 0.30);
   --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }

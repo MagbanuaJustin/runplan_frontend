@@ -10,7 +10,7 @@ const TERMS_VERSION = '2026-10-30'
 const DOWNLOAD_PATH = '/download'
 
 export default function Register() {
-  const { status, loginWithGoogle } = useAuth()
+  const { status, login, loginWithGoogle } = useAuth()
   const navigate = useNavigate()
 
   const googleButtonRef = useRef(null)
@@ -106,6 +106,7 @@ export default function Register() {
     setBusy(true)
 
     let recaptchaToken = ''
+
     try {
       recaptchaToken = recaptcha.getToken()
       await loginWithGoogle(
@@ -153,8 +154,10 @@ export default function Register() {
     setErrors({})
     setBusy(true)
 
+    let recaptchaToken = ''
+
     try {
-      const recaptchaToken = recaptcha.getToken()
+      recaptchaToken = recaptcha.getToken()
 
       await apiPost('/auth/register', {
         email,
@@ -164,19 +167,24 @@ export default function Register() {
         terms_version: TERMS_VERSION,
       })
 
-      navigate('/login', {
-        replace: true,
-        state: {
-          from: { pathname: DOWNLOAD_PATH },
-          notice: 'Your account was created. Sign in to download RunPlan.',
-        },
-      })
+      try {
+        await login(email, password)
+        navigate(DOWNLOAD_PATH, { replace: true })
+      } catch {
+        navigate('/login', {
+          replace: true,
+          state: {
+            from: { pathname: DOWNLOAD_PATH },
+            notice: 'Your account was created. Sign in to download RunPlan.',
+          },
+        })
+      }
     } catch (err) {
       if (err.fields) setErrors(err.fields)
       else if (err.status === 409) setErrors({ email: err.message })
       else setFormError(err.message || 'Account creation failed. Please try again.')
     } finally {
-      recaptcha.reset()
+      if (recaptchaToken) recaptcha.reset()
       setBusy(false)
     }
   }

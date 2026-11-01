@@ -4,6 +4,8 @@ import { apiGet, apiPost } from '../api.js'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import ManualPlanForm from '../components/ManualPlanForm.jsx'
 import { TYPE_LABELS, formatDate, formatDuration, weeklySummary } from '../format.js'
+import PageLoading from '../components/PageLoading.jsx'
+import { useToastOnChange } from '../components/Toast.jsx'
 
 const GOALS = {
   '5k': '5K', '10k': '10K', half_marathon: 'Half marathon',
@@ -138,6 +140,7 @@ export default function Plan() {
   const [draftBrief, setDraftBrief] = useState(null)
   const [activeWarnings, setActiveWarnings] = useState([])
   const [notice, setNotice] = useState('')
+  useToastOnChange(notice)
   const [state, setState] = useState('loading')
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -352,7 +355,7 @@ export default function Plan() {
     }
   }
 
-  if (state === 'loading') return <p role="status">Loading plan...</p>
+  if (state === 'loading') return <PageLoading label="Loading training plan…" />
   if (state === 'error') return <p role="alert">Could not load your plan.</p>
 
   const { active, draft } = plans
@@ -366,8 +369,6 @@ export default function Plan() {
         <strong>Safety note:</strong> This schedule provides general running conditioning guidance, not medical advice.
         Consult a qualified clinician before starting an intensive training block.
       </div>
-
-      {notice && <p className="success" role="status">{notice}</p>}
 
       {error && (
         <div className="error" role="alert" style={{ marginBottom: 14 }}>

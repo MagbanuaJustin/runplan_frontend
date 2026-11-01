@@ -4,6 +4,7 @@ import { apiGet, apiPost, setAccessToken } from '../api.js'
 import { useAuth } from '../auth/AuthContext.jsx'
 import Field from '../components/Field.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
+import { useToastOnChange } from '../components/Toast.jsx'
 
 const EVENT_LABELS = {
   account_registered: { label: 'Account registered', pill: 'pill-ok' },
@@ -32,6 +33,7 @@ export default function Account() {
   const [pwFields, setPwFields] = useState({})
   const [pwError, setPwError] = useState('')
   const [pwSuccess, setPwSuccess] = useState('')
+  useToastOnChange(pwSuccess)
   const [pwBusy, setPwBusy] = useState(false)
 
   // Delete account state
@@ -198,8 +200,6 @@ export default function Account() {
             <p className="note">
               Updating your password immediately revokes refresh tokens on any other signed-in browsers while keeping this session active.
             </p>
-
-            {pwSuccess && <p className="success" role="status">{pwSuccess}</p>}
 
             <form className="form" onSubmit={handleChangePassword} noValidate>
               <Field

@@ -109,23 +109,14 @@ export default function AppLogin() {
   }
 
   return (
-    <div className="auth-split">
-      <section className="auth-hero" aria-label="About RunPlan">
-        <div><BrandLogo /></div>
-        <div className="auth-hero-body">
-          <p className="auth-eyebrow">RunPlan for Android</p>
-          <h2 className="auth-hero-title">Your training, ready when you are.</h2>
-          <p className="auth-hero-copy">
-            Sign in to open your RunPlan training dashboard.
-          </p>
-        </div>
-        <div className="auth-hero-foot">Plan &middot; Train &middot; Adapt</div>
-      </section>
-
+    <div className="auth-split auth-focused">
       <main className="auth-panel">
         <div className="auth-panel-top">
-          <Link to="/login">RunPlan</Link>
           <ThemeToggle />
+        </div>
+
+        <div className="auth-brand">
+          <BrandLogo />
         </div>
 
         <div className="auth-card" aria-busy={busy}>
@@ -182,13 +173,13 @@ export default function AppLogin() {
           </form>
 
           {isAndroid && (
-            <div style={{ marginTop: '18px' }}>
-              <p style={{ textAlign: 'center' }}>Or continue with</p>
+            <div className="auth-alt">
+              <p className="auth-alt-label">Or continue with</p>
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
                 disabled={busy || !clientId}
-                style={{ width: '100%' }}
+                className="btn btn-secondary btn-block"
               >
                 Continue with Google
               </button>

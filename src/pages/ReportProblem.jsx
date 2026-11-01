@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { apiPost } from '../api.js'
+import { useToast, useToastOnChange } from '../components/Toast.jsx'
 
 const CATEGORIES = [
   ['bug', 'Something is broken'],
@@ -13,12 +14,14 @@ const CATEGORIES = [
 
 export default function ReportProblem() {
   const navigate = useNavigate()
+  const toast = useToast()
   const [category, setCategory] = useState('bug')
   const [subject, setSubject] = useState('')
   const [description, setDescription] = useState('')
   const [pagePath, setPagePath] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  useToastOnChange(error, 'error')
 
   async function submit(event) {
     event.preventDefault()
@@ -31,7 +34,8 @@ export default function ReportProblem() {
         description: description.trim(),
         page_path: pagePath.trim(),
       })
-      navigate('/support/reports', { state: { submitted: true } })
+      toast.success('Your report was submitted.')
+      navigate('/support/reports')
     } catch (err) {
       setError(err.message || 'Your report could not be submitted. Please try again.')
     } finally {
@@ -92,7 +96,6 @@ export default function ReportProblem() {
             />
             <small>{description.length}/4000</small>
           </label>
-          {error && <p className="error" role="alert">{error}</p>}
           <div className="support-form-actions">
             <button className="btn" type="submit" disabled={busy}>
               {busy ? 'Submitting...' : 'Submit report'}

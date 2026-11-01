@@ -1144,3 +1144,21 @@ body::after {
   justify-content: center;
   text-align: center;
 }
+
+/* --------------------------------------------------------------------------
+   13. Register: keep the theme toggle clear of the form card
+   The back-link/theme row is absolutely positioned (top: 24px) and the panel
+   only reserved 64px, so the 44px touch-size toggle ended at ~68px and touched
+   or overlapped the card. Reserve the button height plus a 20px gap, and on
+   narrow screens line the button up with the card's right edge.
+   Login (.auth-focused) has its own spacing and is left alone.
+   -------------------------------------------------------------------------- */
+.auth-split:not(.auth-focused) .auth-panel {
+  padding-top: calc(24px + var(--icon-btn) + 20px);
+}
+
+@media (max-width: 900px) {
+  .auth-split:not(.auth-focused) .auth-panel-top {
+    right: var(--space-6, 24px);
+  }
+}

@@ -4,6 +4,7 @@ import { apiGet, apiPost } from '../api.js'
 import { TYPE_LABELS, formatDate, formatDuration, formatLongDate, paceLabel } from '../format.js'
 import WeatherPanel from '../components/WeatherPanel.jsx'
 import PageLoading from '../components/PageLoading.jsx'
+import CoachingReview from '../components/CoachingReview.jsx'
 
 const GOAL_LABELS = {
   '5k': '5K Race',
@@ -563,66 +564,14 @@ export default function Dashboard() {
       </div>
 
       {/* Phase 3: Weekly AI / Rule-Based Coaching Review */}
-      <section className="plan-card" aria-labelledby="coach-title" style={{ marginTop: 14 }}>
-        <div className="panel-head">
-          <h2 id="coach-title">Weekly coaching review</h2>
-          <span className={`pill ${isLiveGroq ? 'pill-ok' : groqReady ? '' : 'pill-muted'}`}>
-            {isLiveGroq
-              ? '\u2713 Groq AI'
-              : groqReady
-                ? 'Groq AI ready'
-                : 'Rule-based coach'}
-          </span>
-        </div>
-
-        {!feedback ? (
-          <p className="note">
-            Generate a 7-day conditioning review from your manual runs and active plan adherence.
-            {!groqReady && ' (Groq is not configured or enabled in the backend environment, so RunPlan will use its built-in rule-based coach.)'}
-          </p>
-        ) : (
-          <>
-            <p className="mono" style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--text-muted)' }}>
-              Window: {formatDate(feedback.period_start)} &ndash; {formatDate(feedback.period_end)}
-              {feedback.provider_status === 'cap_reached'
-                ? ' · Monthly AI cap reached (rule-based fallback)'
-                : ''}
-              {feedback.provider_status === 'fallback'
-                ? ' · AI unreachable (rule-based fallback)'
-                : ''}
-            </p>
-            <p style={{ margin: '0 0 12px', whiteSpace: 'pre-line', lineHeight: 1.6 }}>
-              {feedback.feedback_text}
-            </p>
-
-            {feedback.persisted === false && (
-              <p className="note" style={{ color: 'var(--warning)' }}>
-                This review was generated but could not be saved to your history, so it will be
-                recomputed next time.
-                {feedback.persist_error ? ` (${feedback.persist_error})` : ''}
-              </p>
-            )}
-          </>
-        )}
-
-        {coachError && <p className="error" role="alert">{coachError}</p>}
-
-        <div className="btn-row">
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={coachBusy}
-            onClick={refreshCoaching}
-          >
-            {coachBusy
-              ? 'Analyzing week...'
-              : feedback
-                ? 'Refresh weekly review'
-                : 'Generate weekly review'}
-          </button>
-          <Link className="btn btn-secondary" to="/status">Provider status</Link>
-        </div>
-      </section>
+      <CoachingReview
+        feedback={feedback}
+        groqReady={groqReady}
+        isLiveGroq={isLiveGroq}
+        busy={coachBusy}
+        error={coachError}
+        onRefresh={refreshCoaching}
+      />
     </>
   )
 }

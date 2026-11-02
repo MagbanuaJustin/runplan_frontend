@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext.jsx'
@@ -31,24 +31,66 @@ const AI_SUGGESTIONS = [
   'Am I on track for my goal?',
 ]
 
+/**
+ * The official RunPlan mark: a navy tile with a glowing pulse line that ends in
+ * two dots (same artwork as runplan-logo.svg), plus the wordmark. Gradient ids
+ * are unique per instance so several logos can sit on one page.
+ */
 export function BrandLogo() {
+  const uid = useId().replace(/:/g, '')
+
   return (
     <span className="brand">
-      <span className="brand-icon" aria-hidden="true">
-        <svg
-          width="17"
-          height="17"
-          viewBox="0 0 24 24"
+      <svg
+        className="brand-mark"
+        viewBox="0 0 512 512"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <defs>
+          <linearGradient id={`${uid}-tile`} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#1a3b78" />
+            <stop offset="1" stopColor="#071326" />
+          </linearGradient>
+          <linearGradient id={`${uid}-rim`} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#6aa8ff" />
+            <stop offset="1" stopColor="#8a6cf2" />
+          </linearGradient>
+          <linearGradient id={`${uid}-pulse`} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="#5eead4" />
+            <stop offset="0.5" stopColor="#65a5ff" />
+            <stop offset="1" stopColor="#9b86ff" />
+          </linearGradient>
+          <radialGradient id={`${uid}-shine`} cx="0.28" cy="0.18" r="0.85">
+            <stop offset="0" stopColor="#8fb8ff" stopOpacity="0.38" />
+            <stop offset="1" stopColor="#8fb8ff" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <rect
+          x="24"
+          y="24"
+          width="464"
+          height="464"
+          rx="116"
+          fill={`url(#${uid}-tile)`}
+          stroke={`url(#${uid}-rim)`}
+          strokeWidth="14"
+        />
+        <rect x="24" y="24" width="464" height="464" rx="116" fill={`url(#${uid}-shine)`} />
+        <path
+          d="M88 267h91l42-83 63 154 54-111 34 40h52"
           fill="none"
-          stroke="currentColor"
-          strokeWidth="2.2"
+          stroke={`url(#${uid}-pulse)`}
+          strokeWidth="30"
           strokeLinecap="round"
           strokeLinejoin="round"
-        >
-          <path d="M3 12h4l3-7 4 14 3-7h4" />
-        </svg>
+        />
+        <circle cx="88" cy="267" r="17" fill="#f4f8ff" />
+        <circle cx="424" cy="267" r="17" fill="#f4f8ff" />
+      </svg>
+      <span className="brand-word">
+        Run<span className="brand-word-accent">Plan</span>
       </span>
-      <span>RunPlan</span>
     </span>
   )
 }

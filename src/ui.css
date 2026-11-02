@@ -1175,3 +1175,76 @@ body::after {
 .auth-split .auth-panel {
   background: transparent;
 }
+
+/* --------------------------------------------------------------------------
+   15. Official RunPlan logo
+   The mark is the full-colour tile (not a tiny outline icon); the wordmark
+   gets a gradient "Plan". Sized per place it appears.
+   -------------------------------------------------------------------------- */
+.brand {
+  gap: 12px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.brand-mark {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  filter: drop-shadow(0 4px 14px rgba(59, 120, 255, 0.45));
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.brand:hover .brand-mark {
+  transform: translateY(-1px) scale(1.04);
+  filter: drop-shadow(0 6px 18px rgba(99, 130, 255, 0.6));
+}
+
+.brand-word {
+  line-height: 1;
+  color: var(--text);
+}
+
+.brand-word-accent {
+  background: linear-gradient(90deg, #4f8cff, #8f7bff 70%, #5eead4);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: #5b8def;
+}
+
+.sidebar-brand .brand-mark {
+  width: 44px;
+  height: 44px;
+}
+
+.auth-brand .brand {
+  gap: 14px;
+  font-size: 30px;
+}
+
+.auth-brand .brand-mark {
+  width: 58px;
+  height: 58px;
+}
+
+.public-brand .brand {
+  font-size: 22px;
+}
+
+.public-brand .brand-mark {
+  width: 44px;
+  height: 44px;
+}
+
+@media (max-width: 520px) {
+  .auth-brand .brand {
+    font-size: 26px;
+  }
+
+  .auth-brand .brand-mark {
+    width: 50px;
+    height: 50px;
+  }
+}

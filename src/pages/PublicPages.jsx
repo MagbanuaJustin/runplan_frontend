@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ThemeToggle } from '../components/Layout.jsx'
+import { BrandLogo, ThemeToggle } from '../components/Layout.jsx'
 import LiveBackground from '../components/LiveBackground.jsx'
 
 const effectiveDate = 'October 30, 2026'
@@ -9,8 +9,7 @@ function PublicHeader() {
   return (
     <header className="public-header">
       <Link className="public-brand" to="/" aria-label="RunPlan home">
-        <span className="public-brand-icon" aria-hidden="true">R</span>
-        <span>RunPlan</span>
+        <BrandLogo />
       </Link>
 
       <nav className="public-nav" aria-label="Main navigation">

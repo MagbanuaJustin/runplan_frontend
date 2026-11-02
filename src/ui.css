@@ -1162,3 +1162,16 @@ body::after {
     right: var(--space-6, 24px);
   }
 }
+
+/* --------------------------------------------------------------------------
+   14. Let the live background show through the auth pages
+   The split hero and the form panel painted solid colours over the canvas.
+   Make them transparent; the cards keep their own solid surface.
+   -------------------------------------------------------------------------- */
+.auth-split .auth-hero {
+  background-color: transparent;
+}
+
+.auth-split .auth-panel {
+  background: transparent;
+}

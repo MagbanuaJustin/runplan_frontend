@@ -5,6 +5,7 @@ import { apiPost } from '../api.js'
 import { useAuth } from '../auth/AuthContext.jsx'
 import useRecaptcha from '../auth/useRecaptcha.js'
 import { BrandLogo, ThemeToggle } from '../components/Layout.jsx'
+import LiveBackground from '../components/LiveBackground.jsx'
 import Field from '../components/Field.jsx'
 
 const PUBLIC_SITE_URL =
@@ -123,6 +124,7 @@ function WebForgotPassword() {
 
   return (
     <div className="auth-split">
+      <LiveBackground />
       <section className="auth-hero" aria-label="Account Recovery">
         <div>
           <BrandLogo />

@@ -5,6 +5,7 @@ import { SocialLogin } from '@capgo/capacitor-social-login'
 import { useAuth } from '../auth/AuthContext.jsx'
 import useRecaptcha from '../auth/useRecaptcha.js'
 import { BrandLogo, ThemeToggle } from '../components/Layout.jsx'
+import LiveBackground from '../components/LiveBackground.jsx'
 
 const GOOGLE_SCRIPT_ID = 'runplan-google-identity-services'
 const GOOGLE_SCRIPT_URL = 'https://accounts.google.com/gsi/client'
@@ -256,6 +257,7 @@ export default function Login() {
 
   return (
     <div className="auth-split auth-focused">
+      <LiveBackground />
       <style>
         {`
           @keyframes runplan-login-spin {

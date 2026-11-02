@@ -4,6 +4,7 @@ import { apiPost } from '../api.js'
 import { useAuth } from '../auth/AuthContext.jsx'
 import useRecaptcha from '../auth/useRecaptcha.js'
 import { BrandLogo, ThemeToggle } from '../components/Layout.jsx'
+import LiveBackground from '../components/LiveBackground.jsx'
 import Field from '../components/Field.jsx'
 
 export default function ResetPassword() {
@@ -68,6 +69,7 @@ export default function ResetPassword() {
 
   return (
     <div className="auth-split">
+      <LiveBackground />
       <section className="auth-hero" aria-label="Choose a New Password">
         <div>
           <BrandLogo />

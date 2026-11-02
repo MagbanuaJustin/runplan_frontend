@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ThemeToggle } from '../components/Layout.jsx'
+import LiveBackground from '../components/LiveBackground.jsx'
 
 const effectiveDate = 'October 30, 2026'
 const downloadAfterLogin = { from: { pathname: '/download' } }
@@ -45,13 +46,13 @@ function PublicFooter() {
 function PublicShell({ children }) {
   return (
     <div className="public-site">
+      <LiveBackground />
       <style>{`
         .public-site {
           min-height: 100vh;
           color: var(--text, #edf2fb);
           background:
-            radial-gradient(ellipse 70% 50% at 50% 0%, rgba(59, 130, 246, .16), transparent 72%),
-            var(--bg-canvas, #060a12);
+            radial-gradient(ellipse 70% 50% at 50% 0%, rgba(59, 130, 246, .16), transparent 72%);
           font-family: var(--font-sans, Inter, system-ui, sans-serif);
         }
 

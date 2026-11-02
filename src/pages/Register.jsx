@@ -4,6 +4,7 @@ import { apiPost } from '../api.js'
 import { useAuth } from '../auth/AuthContext.jsx'
 import useRecaptcha from '../auth/useRecaptcha.js'
 import { BrandLogo, ThemeToggle } from '../components/Layout.jsx'
+import LiveBackground from '../components/LiveBackground.jsx'
 
 const GOOGLE_SCRIPT_SRC = 'https://accounts.google.com/gsi/client'
 const TERMS_VERSION = '2026-10-30'
@@ -191,6 +192,7 @@ export default function Register() {
 
   return (
     <div className="auth-split">
+      <LiveBackground />
       <section className="auth-hero" aria-label="About RunPlan AI">
         <div>
           <BrandLogo />

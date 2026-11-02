@@ -1,55 +1,60 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { apiDownload } from '../api.js'
-import { useAuth } from '../auth/AuthContext.jsx'
-import { useToastOnChange } from '../components/Toast.jsx'
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { apiDownload } from "../api.js";
+import { useAuth } from "../auth/AuthContext.jsx";
+import LiveBackground from "../components/LiveBackground.jsx";
+import { useToastOnChange } from "../components/Toast.jsx";
 
 export default function DownloadPage() {
-  const { user } = useAuth()
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  const [message, setMessage] = useState('')
-  useToastOnChange(message)
-  useToastOnChange(error, 'error')
+  const { user } = useAuth();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  useToastOnChange(message);
+  useToastOnChange(error, "error");
 
   async function handleDownload() {
-    if (busy) return
+    if (busy) return;
 
-    setBusy(true)
-    setError('')
-    setMessage('')
+    setBusy(true);
+    setError("");
+    setMessage("");
 
     try {
-      const blob = await apiDownload('/downloads/android')
+      const blob = await apiDownload("/downloads/android");
 
       if (!blob || blob.size === 0) {
-        throw new Error('The Android package was empty. Please try again later.')
+        throw new Error(
+          "The Android package was empty. Please try again later.",
+        );
       }
 
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = 'RunPlan-Android.apk'
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "RunPlan-Android.apk";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
 
-      window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
-      setMessage('Download started. Open the APK from your phone’s Downloads.')
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      setMessage("Download started. Open the APK from your phone’s Downloads.");
     } catch (err) {
-      setError(err.message || 'Download failed. Please try again.')
+      setError(err.message || "Download failed. Please try again.");
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
   }
 
   return (
     <div className="shell">
+      <LiveBackground />
       <p className="section-eyebrow">RunPlan for Android</p>
       <h1>Download the app</h1>
       <p className="note">
-        You’re signed in as <strong>{user?.email || 'your RunPlan account'}</strong>.
-        Use the button below to download the Android installer.
+        You’re signed in as{" "}
+        <strong>{user?.email || "your RunPlan account"}</strong>. Use the button
+        below to download the Android installer.
       </p>
 
       <section className="plan-card" aria-busy={busy}>
@@ -66,9 +71,8 @@ export default function DownloadPage() {
           onClick={handleDownload}
           disabled={busy}
         >
-          {busy ? 'Preparing download…' : 'Download RunPlan APK'}
+          {busy ? "Preparing download…" : "Download RunPlan APK"}
         </button>
-
       </section>
 
       <p className="note">
@@ -78,5 +82,5 @@ export default function DownloadPage() {
 
       <Link to="/dashboard">Back to your dashboard</Link>
     </div>
-  )
+  );
 }

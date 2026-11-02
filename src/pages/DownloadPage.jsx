@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiDownload } from '../api.js'
 import { useAuth } from '../auth/AuthContext.jsx'
+import { BrandLogo } from '../components/Layout.jsx'
 import LiveBackground from '../components/LiveBackground.jsx'
 import { useToastOnChange } from '../components/Toast.jsx'
 
@@ -102,6 +103,15 @@ export default function DownloadPage() {
         .dl-page > h1 {
           display: block;
         }
+
+        .dl-brand {
+          display: inline-flex;
+          margin: 0 0 clamp(20px, 4vh, 36px);
+          text-decoration: none;
+        }
+
+        .dl-brand .brand-mark { width: 52px; height: 52px; }
+        .dl-brand .brand { font-size: 28px; gap: 14px; }
 
         .dl-title {
           margin: 0 0 10px;
@@ -293,6 +303,10 @@ export default function DownloadPage() {
           .dl-button { width: 100%; min-width: 0; }
         }
       `}</style>
+
+      <Link className="dl-brand" to="/dashboard" aria-label="RunPlan home">
+        <BrandLogo />
+      </Link>
 
       <p className="section-eyebrow">RunPlan for Android</p>
       <h1 className="dl-title">Download the app</h1>

@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core'
 import { SocialLogin } from '@capgo/capacitor-social-login'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { BrandLogo, ThemeToggle } from '../components/Layout.jsx'
+import LiveBackground from '../components/LiveBackground.jsx'
 
 const PUBLIC_SITE_URL =
   import.meta.env.VITE_PUBLIC_SITE_URL || 'https://runplan-frontend-livid.vercel.app'
@@ -110,6 +111,7 @@ export default function AppLogin() {
 
   return (
     <div className="auth-split auth-focused">
+      <LiveBackground />
       <main className="auth-panel">
         <div className="auth-panel-top">
           <ThemeToggle />

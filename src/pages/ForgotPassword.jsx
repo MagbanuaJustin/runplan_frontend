@@ -29,7 +29,6 @@ function NativeForgotPassword() {
 
   return (
     <div className="auth-split">
-      <LiveBackground />
       <section className="auth-hero" aria-label="Account Recovery">
         <div>
           <BrandLogo />

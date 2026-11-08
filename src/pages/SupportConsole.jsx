@@ -3,20 +3,14 @@ import { Link } from 'react-router-dom'
 import { apiGet, apiPatch, apiPost } from '../api.js'
 import PageLoading from '../components/PageLoading.jsx'
 
-const TABS = ['Reports', 'System health', 'Users', 'Help guides', 'Alert rules', 'Activity', 'Data safety']
+const TABS = [
+    'Reports',
+    'System health',
+    'Users',
+    'Activity',
+    'Data safety',
+]
 const STATUS_LABELS = { open: 'Open', in_progress: 'In progress', resolved: 'Resolved', closed: 'Closed' }
-const ALERT_RULES = [
-  { name: 'Missed planned workouts', behavior: 'Past planned sessions are marked missed when the runner dashboard is opened.', source: 'Training plan' },
-  { name: 'Run reminders', behavior: 'Browser push reminders require Web Push to be configured and the runner to opt in on their device.', source: 'Notifications' },
-  { name: 'Google Calendar sync', behavior: 'Calendar events sync only when a runner has connected Google Calendar and chooses Sync now.', source: 'Integrations' },
-]
-const HELP_GUIDES = [
-  ['GPS run tracking', 'Open Start a Run, allow location access, wait for a GPS fix, then start and save the run. Keep the page open while tracking.'],
-  ['Training calendar', 'Open a planned day to review the workout. If calendar sync is connected, use Sync now to update Google Calendar.'],
-  ['Report an issue', 'Include the affected page, what you expected, what happened, and the exact error text. Never include passwords or tokens.'],
-  ['Account recovery', 'A generic confirmation is shown to protect account privacy. Email delivery depends on the configured transactional mail provider.'],
-]
-
 function Metric({ label, value, hint }) {
   return <article className="support-metric"><span>{label}</span><strong>{value ?? '—'}</strong>{hint && <small>{hint}</small>}</article>
 }
@@ -328,14 +322,6 @@ export default function SupportConsole() {
         </>}
       </section>}
       <p className="note">Admin accounts cannot be managed from this screen. New runner accounts continue to use the existing registration page.</p>
-    </section>}
-
-    {tab === 'Help guides' && <section className="support-guide-grid">{HELP_GUIDES.map(([title, copy]) => <article className="plan-card" key={title}><h2>{title}</h2><p>{copy}</p></article>)}</section>}
-
-    {tab === 'Alert rules' && <section className="support-console-section">
-      <div className="panel-head"><h2>RunPlan notifications and rules</h2><span className="pill pill-muted">Read only</span></div>
-      <div className="support-rule-list">{ALERT_RULES.map((rule) => <article key={rule.name}><div><h3>{rule.name}</h3><p>{rule.behavior}</p></div><span className="pill pill-muted">{rule.source}</span></article>)}</div>
-      <p className="note">These are the current app behaviors, not editable per-user alert thresholds.</p>
     </section>}
 
     {tab === 'Activity' && <section className="support-console-section">

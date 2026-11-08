@@ -23,6 +23,8 @@ import MyReports from './pages/MyReports.jsx'
 import SupportConsole from './pages/SupportConsole.jsx'
 import DownloadPage from './pages/DownloadPage.jsx'
 import ManualWorkout from './pages/ManualWorkout.jsx'
+import HelpGuides from './pages/HelpGuides.jsx'
+import AlertRules from './pages/AlertRules.jsx'
 
 import {
     LandingPage,
@@ -97,10 +99,21 @@ export default function App() {
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/account" element={<Account />} />
                     <Route path="/summary" element={<SummaryReport />} />
-                    <Route
+                     <Route
                         path="/support/report"
                         element={<ReportProblem />}
                     />
+
+                    <Route
+                        path="/help-guides"
+                        element={<HelpGuides />}
+                    />
+
+                    <Route
+                        path="/alert-rules"
+                        element={<AlertRules />}
+                    />
+
                     <Route
                         path="/support/reports"
                         element={<MyReports />}

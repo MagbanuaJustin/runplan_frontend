@@ -381,6 +381,43 @@ const NAV_GROUPS = [
   {
     label: 'Help & Support',
     items: [
+    {
+    to: '/help-guides',
+    label: 'Help Guides',
+    icon: (
+        <svg
+            className="nav-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        >
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" />
+            <path d="M8 7h8M8 11h8" />
+        </svg>
+    ),
+},
+{
+    to: '/alert-rules',
+    label: 'Alert Rules',
+    icon: (
+        <svg
+            className="nav-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        >
+            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+            <path d="M10 21h4" />
+        </svg>
+    ),
+},
       {
         to: '/support/report',
         label: 'Report a Problem',

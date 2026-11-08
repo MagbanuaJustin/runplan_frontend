@@ -377,6 +377,11 @@ body::after {
   gap: var(--space-4);
 }
 
+.single-workspace {
+  grid-template-columns: minmax(0, 680px);
+  justify-content: center;
+}
+
 /* the contextual guidance cards used to sit flush against each other */
 .page-context-card+.page-context-card {
   margin-top: var(--space-4);

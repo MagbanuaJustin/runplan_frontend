@@ -63,11 +63,12 @@ function Field({ id, label, error, children }) {
 }
 
 export default function ActivityForm({
-  activity = null,
-  sessionId = null,
-  defaults = null,
-  onSaved,
-  onCancel,
+    activity = null,
+    sessionId = null,
+    defaults = null,
+    dateMode = 'any',
+    onSaved,
+    onCancel,
 }) {
   const editing = activity !== null
   const prefix = editing ? `edit-${activity.id}-` : 'new-'
@@ -138,10 +139,14 @@ export default function ActivityForm({
     const effort = Number(effortText)
 
     if (!form.date) {
-      nextErrors.activity_date = 'Choose the date of your run.'
-    } else if (form.date > currentDate) {
-      nextErrors.activity_date = 'The run date cannot be in the future.'
-    }
+    nextErrors.activity_date = 'Choose the date of your run.'
+} else if (dateMode === 'today' && form.date !== currentDate) {
+    nextErrors.activity_date = 'The workout date must be today.'
+} else if (dateMode === 'past' && form.date >= currentDate) {
+    nextErrors.activity_date = 'Choose a date before today.'
+} else if (form.date > currentDate) {
+    nextErrors.activity_date = 'The run date cannot be in the future.'
+}
 
     if (
       !form.distance.trim() ||
@@ -215,13 +220,14 @@ export default function ActivityForm({
         error={errors.activity_date}
       >
         <input
-          {...attrs('date', 'activity_date')}
-          type="date"
-          max={today()}
-          value={form.date}
-          onChange={set('date')}
-          autoFocus={editing}
-        />
+    {...attrs('date', 'activity_date')}
+    type="date"
+    min={dateMode === 'today' ? today() : undefined}
+    max={dateMode === 'past' ? new Date(Date.now() - 86400000).toLocaleDateString('en-CA') : today()}
+    value={form.date}
+    onChange={set('date')}
+    autoFocus={editing}
+/>
       </Field>
 
       <Field

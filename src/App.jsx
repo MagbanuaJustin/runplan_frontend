@@ -9,6 +9,7 @@ import ForgotPassword from './pages/ForgotPassword.jsx'
 import ResetPassword from './pages/ResetPassword.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Activities from './pages/Activities.jsx'
+import ActivityHistory from './pages/ActivityHistory.jsx'
 import Run from './pages/Run.jsx'
 import ComingSoon from './pages/ComingSoon.jsx'
 import Profile from './pages/Profile.jsx'
@@ -21,78 +22,101 @@ import ReportProblem from './pages/ReportProblem.jsx'
 import MyReports from './pages/MyReports.jsx'
 import SupportConsole from './pages/SupportConsole.jsx'
 import DownloadPage from './pages/DownloadPage.jsx'
+import ManualWorkout from './pages/ManualWorkout.jsx'
+
 import {
-  LandingPage,
-  PrivacyPage,
-  TermsPage,
+    LandingPage,
+    PrivacyPage,
+    TermsPage,
 } from './pages/PublicPages.jsx'
 
 const isNativeApp = Capacitor.isNativePlatform()
 
 export default function App() {
-  return (
-    <Routes>
-      <Route
-        path="/"
-        element={
-          isNativeApp
-            ? <Navigate to="/login" replace />
-            : <LandingPage />
-        }
-      />
-      <Route path="/terms" element={<TermsPage />} />
-      <Route path="/privacy" element={<PrivacyPage />} />
+    return (
+        <Routes>
+            <Route
+                path="/"
+                element={
+                    isNativeApp
+                        ? <Navigate to="/login" replace />
+                        : <LandingPage />
+                }
+            />
 
-      <Route
-        path="/login"
-        element={isNativeApp ? <AppLogin /> : <Login />}
-      />
-      <Route
-        path="/register"
-        element={
-          isNativeApp
-            ? <Navigate to="/login" replace />
-            : <Register />
-        }
-      />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
 
-      <Route
-        path="/download"
-        element={
-          isNativeApp
-            ? <Navigate to="/dashboard" replace />
-            : <ProtectedRoute />
-        }
-      >
-        <Route index element={<DownloadPage />} />
-      </Route>
+            <Route
+                path="/login"
+                element={isNativeApp ? <AppLogin /> : <Login />}
+            />
 
-      <Route element={<ProtectedRoute />}>
-        <Route element={<Layout />}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/calendar" element={<Calendar />} />
-          <Route path="/activities" element={<Activities />} />
-          <Route path="/run" element={<Run />} />
-          <Route path="/plan" element={<Plan />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/account" element={<Account />} />
-          <Route path="/summary" element={<SummaryReport />} />
-          <Route path="/support/report" element={<ReportProblem />} />
-          <Route path="/support/reports" element={<MyReports />} />
+            <Route
+                path="/register"
+                element={
+                    isNativeApp
+                        ? <Navigate to="/login" replace />
+                        : <Register />
+                }
+            />
 
-          <Route element={<AdminRoute />}>
-            <Route path="/status" element={<Status />} />
-            <Route path="/support" element={<SupportConsole />} />
-          </Route>
-        </Route>
-      </Route>
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
-      <Route
-        path="*"
-        element={<ComingSoon title="Page not found" />}
-      />
-    </Routes>
-  )
+            <Route
+                path="/download"
+                element={
+                    isNativeApp
+                        ? <Navigate to="/dashboard" replace />
+                        : <ProtectedRoute />
+                }
+            >
+                <Route index element={<DownloadPage />} />
+            </Route>
+
+            <Route element={<ProtectedRoute />}>
+                <Route element={<Layout />}>
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/calendar" element={<Calendar />} />
+                    <Route path="/activities" element={<Activities />} />
+
+                    {/* New dedicated Activity History page */}
+                    <Route
+                        path="/activity-history"
+                        element={<ActivityHistory />}
+                    />
+
+                    <Route
+                        path="/manual-workout"
+                        element={<ManualWorkout />}
+                    />
+
+                    <Route path="/run" element={<Run />} />
+                    <Route path="/plan" element={<Plan />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/account" element={<Account />} />
+                    <Route path="/summary" element={<SummaryReport />} />
+                    <Route
+                        path="/support/report"
+                        element={<ReportProblem />}
+                    />
+                    <Route
+                        path="/support/reports"
+                        element={<MyReports />}
+                    />
+
+                    <Route element={<AdminRoute />}>
+                        <Route path="/status" element={<Status />} />
+                        <Route path="/support" element={<SupportConsole />} />
+                    </Route>
+                </Route>
+            </Route>
+
+            <Route
+                path="*"
+                element={<ComingSoon title="Page not found" />}
+            />
+        </Routes>
+    )
 }

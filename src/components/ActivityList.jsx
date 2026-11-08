@@ -136,7 +136,7 @@ export default function ActivityList() {
       {state === 'ready' && activities.length > 0 && (
         <>
           <p className="note">
-            Showing {activities.length} manual {activities.length === 1 ? 'run' : 'runs'}
+            Showing {activities.length} {activities.length === 1 ? 'activity' : 'activities'}
             {hasFilter ? ' in selected range' : ''}.
           </p>
 

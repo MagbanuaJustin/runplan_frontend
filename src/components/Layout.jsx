@@ -234,6 +234,43 @@ const NAV_GROUPS = [
           </svg>
         ),
       },
+      {
+        to: '/manual-workout',
+        label: 'Record a Manual Workout',
+        icon: (
+          <svg
+            className="nav-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="3" y="4" width="18" height="18" rx="2" />
+            <path d="M16 2v4M8 2v4M3 10h18M8 14h3M8 18h6" />
+          </svg>
+        ),
+      },
+      {
+        to: '/activity-history',
+        label: 'Activity History',
+        icon: (
+          <svg
+            className="nav-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M3 12a9 9 0 1 0 2.64-6.36L3 8" />
+            <path d="M3 3v5h5" />
+            <path d="M12 7v5l3 2" />
+          </svg>
+        ),
+      },
     ],
   },
   {
@@ -390,6 +427,8 @@ const PAGE_TITLES = {
   '/calendar': 'Training Calendar',
   '/run': 'Start a Run',
   '/activities': 'Log a Past Run',
+  '/manual-workout': 'Record a Manual Workout',
+  '/activity-history': 'Activity History',
   '/plan': 'Training Plan',
   '/profile': 'Runner Profile',
   '/account': 'Account & Security',

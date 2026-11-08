@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { CircleMarker, MapContainer, Polyline, TileLayer, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { apiGet, apiPost } from '../api.js'
@@ -51,6 +51,41 @@ function formatPace(totalSeconds, distanceKm) {
   const seconds = secondsPerKm % 60
 
   return `${minutes}:${String(seconds).padStart(2, '0')} /km`
+}
+
+function formatDuration(totalSeconds) {
+    if (totalSeconds === null || totalSeconds === undefined) {
+        return 'Not specified'
+    }
+
+    const seconds = Math.max(0, Math.floor(Number(totalSeconds)))
+
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    const remainder = seconds % 60
+
+    if (hours > 0) {
+        return `${hours}:${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`
+    }
+
+    return `${minutes}:${String(remainder).padStart(2, '0')}`
+}
+
+function formatPlannedStartTime(time) {
+    if (!time) {
+        return 'Flexible'
+    }
+
+    const [hours, minutes] = time.split(':').map(Number)
+
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+        return time
+    }
+
+    const suffix = hours >= 12 ? 'PM' : 'AM'
+    const hour12 = hours % 12 || 12
+
+    return `${hour12}:${String(minutes).padStart(2, '0')} ${suffix}`
 }
 
 function localDate() {
@@ -163,9 +198,23 @@ function FollowRunner({ center }) {
 
 export default function Run() {
   const [searchParams] = useSearchParams()
+const location = useLocation()
+
   const sessionId = searchParams.get('session')
+
+  const manualWorkout = location.state?.manualWorkout ?? null
+
   const [linkedSession, setLinkedSession] = useState(null)
-  const [sessionState, setSessionState] = useState(sessionId ? 'loading' : 'none')
+
+  const [sessionState, setSessionState] = useState(
+    sessionId ? 'loading' : 'none',
+  )
+
+  const targetDistanceKm = linkedSession
+    ? Number(linkedSession.planned_distance_km)
+    : Number(manualWorkout?.distance) || 0
+
+  const hasLoadedWorkout = Boolean(linkedSession || manualWorkout)
   const [status, setStatus] = useState('idle')
   const [currentPosition, setCurrentPosition] = useState(null)
   const [gpsAccuracy, setGpsAccuracy] = useState(null)
@@ -289,9 +338,10 @@ export default function Run() {
 
     if (meters < movementThreshold) return
 
-    const plannedDistanceKm = Number(linkedSession?.planned_distance_km)
+    const plannedDistanceKm = targetDistanceKm
+
     const hasPlannedDistance =
-      Number.isFinite(plannedDistanceKm) && plannedDistanceKm > 0
+    Number.isFinite(plannedDistanceKm) && plannedDistanceKm > 0
     const plannedDistanceMeters = hasPlannedDistance
       ? plannedDistanceKm * 1000
       : Infinity
@@ -534,13 +584,15 @@ export default function Run() {
 
     try {
       await apiPost('/activities', {
-        activity_date: localDate(),
-        distance_km: distanceRef.current.toFixed(3),
-        duration_seconds: Math.max(1, Math.floor(elapsedRef.current)),
-        effort: null,
-        notes: 'Recorded with the RunPlan GPS tracker.',
-        ...(linkedSession ? { session_id: linkedSession.id } : {}),
-      })
+    activity_date: manualWorkout?.date ?? localDate(),
+    distance_km: distanceRef.current.toFixed(3),
+    duration_seconds: Math.max(1, Math.floor(elapsedRef.current)),
+    effort: null,
+    notes: manualWorkout?.notes
+        ? `${manualWorkout.notes}\nRecorded with the RunPlan GPS tracker.`
+        : 'Recorded with the RunPlan GPS tracker.',
+    ...(linkedSession ? { session_id: linkedSession.id } : {}),
+})
       setSaved(true)
     } catch (saveError) {
       setError(
@@ -615,17 +667,111 @@ export default function Run() {
 
   return (
     <>
-      {linkedSession && (
-        <section className="plan-card" aria-label="Planned workout linked to this run">
-          <div className="panel-head">
-            <h2>{TYPE_LABELS[linkedSession.type] ?? linkedSession.type} workout</h2>
-            <span className="pill">Linked to calendar</span>
-          </div>
-          <p className="note" style={{ marginBottom: 0 }}>
-            {formatLongDate(linkedSession.scheduled_date)} · Planned distance: {linkedSession.planned_distance_km} km
-          </p>
-        </section>
-      )}
+      {hasLoadedWorkout && (
+    <section
+        className="plan-card run-linked-workout"
+        aria-label="Loaded workout"
+    >
+        <div className="panel-head">
+            <div>
+                <span className="note">
+                    {linkedSession ? 'SCHEDULED WORKOUT' : 'MANUAL WORKOUT'}
+                </span>
+
+                <h2>
+                    {linkedSession
+                        ? TYPE_LABELS[linkedSession.type] ?? linkedSession.type
+                        : 'Manual Workout'}
+                </h2>
+            </div>
+
+            <span className="pill pill-ok">
+                ✓ {linkedSession ? 'Session loaded' : 'Manual workout loaded'}
+            </span>
+        </div>
+
+        <p className="note">
+            {formatLongDate(
+                linkedSession
+                    ? linkedSession.scheduled_date
+                    : manualWorkout.date,
+            )}
+        </p>
+
+        <div className="run-linked-grid">
+            <div>
+                <span>Target distance</span>
+                <strong>{targetDistanceKm.toFixed(2)} km</strong>
+            </div>
+
+            <div>
+                <span>Estimated duration</span>
+                <strong>
+                    {linkedSession
+                        ? formatDuration(linkedSession.planned_duration_seconds)
+                        : 'Based on your GPS run'}
+                </strong>
+            </div>
+
+            <div>
+                <span>Target pace</span>
+                <strong>
+                    {linkedSession
+                        ? formatPace(
+                            linkedSession.planned_duration_seconds,
+                            targetDistanceKm,
+                        )
+                        : 'Not specified'}
+                </strong>
+            </div>
+
+            <div>
+                <span>Planned start</span>
+                <strong>
+                    {linkedSession
+                        ? formatPlannedStartTime(linkedSession.planned_start_time)
+                        : 'Flexible'}
+                </strong>
+            </div>
+        </div>
+
+        {(linkedSession?.notes || manualWorkout?.notes) && (
+            <div className="run-linked-notes">
+                <strong>Workout instructions</strong>
+                <p>{linkedSession?.notes || manualWorkout?.notes}</p>
+            </div>
+        )}
+
+        <div className="run-linked-progress">
+            <div className="run-linked-progress-heading">
+                <span>Workout progress</span>
+
+                <strong>
+                    {distanceKm.toFixed(2)} / {targetDistanceKm.toFixed(2)} km
+                </strong>
+            </div>
+
+            <div
+                className="run-linked-progress-track"
+                role="progressbar"
+                aria-label="Workout distance progress"
+                aria-valuemin={0}
+                aria-valuemax={targetDistanceKm}
+                aria-valuenow={Math.min(distanceKm, targetDistanceKm)}
+            >
+                <div
+                    className="run-linked-progress-fill"
+                    style={{
+                        width: `${Math.min(
+                            100,
+                            (distanceKm / targetDistanceKm) * 100,
+                        )}%`,
+                    }}
+                />
+            </div>
+        </div>
+    </section>
+)}
 
       <style>{`
         .run-toolbar {
@@ -771,6 +917,98 @@ export default function Run() {
             animation-duration: 1.5s;
           }
         }
+
+        .run-linked-workout {
+    margin-bottom: 16px;
+    border: 1px solid rgba(59, 130, 246, .35);
+}
+
+.run-linked-workout .panel-head {
+    align-items: center;
+    gap: 12px;
+}
+
+.run-linked-workout .panel-head h2 {
+    margin: 5px 0 0;
+}
+
+.run-linked-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.run-linked-grid > div {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 13px;
+    border: 1px solid var(--border, #303b4d);
+    border-radius: 10px;
+    background: var(--surface-2, #202938);
+}
+
+.run-linked-grid span,
+.run-linked-progress-heading span {
+    color: var(--muted, #94a3b8);
+    font-size: .8rem;
+}
+
+.run-linked-grid strong,
+.run-linked-progress-heading strong {
+    font-size: 1rem;
+}
+
+.run-linked-notes {
+    margin-top: 14px;
+    padding: 13px;
+    border-left: 3px solid #3b82f6;
+    border-radius: 8px;
+    background: rgba(59, 130, 246, .08);
+}
+
+.run-linked-notes p {
+    margin: 6px 0 0;
+    color: var(--muted, #94a3b8);
+}
+
+.run-linked-progress {
+    margin-top: 18px;
+}
+
+.run-linked-progress-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 9px;
+}
+
+.run-linked-progress-track {
+    height: 9px;
+    overflow: hidden;
+    border-radius: 20px;
+    background: var(--border, #303b4d);
+}
+
+.run-linked-progress-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: #3b82f6;
+    transition: width .25s ease;
+}
+
+@media (max-width: 480px) {
+    .run-linked-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .run-linked-workout .panel-head {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
       `}</style>
 
       <div className="run-toolbar">
@@ -983,8 +1221,10 @@ export default function Run() {
       {saved && (
         <p className="note" role="status">
           {linkedSession
-            ? 'Run saved and linked to this calendar workout. The workout is now marked complete.'
-            : 'Run saved to your activity history.'}
+    ? 'Run saved and linked to this calendar workout. The workout is now marked complete.'
+    : manualWorkout
+        ? 'Manual workout completed and saved to your activity history.'
+        : 'Run saved to your activity history.'}
         </p>
       )}
 

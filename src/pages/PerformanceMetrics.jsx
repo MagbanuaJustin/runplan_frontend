@@ -324,7 +324,15 @@ function WorkoutCategoryAnalysis({
         </div>
         <div className="pmx-category-stat">
           <small>Average per run</small>
-          <strong>{totalRuns ? `${(totalDistance / totalRuns).toFixed(2)} <span>km</span>` : '--'}</strong>
+          <strong>
+            {totalRuns ? (
+            <>
+              {(totalDistance / totalRuns).toFixed(2)} <span>km</span>
+            </>
+            ) : (
+              '--'
+            )}
+          </strong>
         </div>
       </div>
 

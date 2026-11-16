@@ -197,6 +197,14 @@ function FollowRunner({ center }) {
 }
 
 export default function Run() {
+  useEffect(() => {
+    document.body.classList.add('is-run-tracking')
+
+    return () => {
+      document.body.classList.remove('is-run-tracking')
+    }
+  }, [])
+
   const [searchParams] = useSearchParams()
 const location = useLocation()
 
@@ -667,571 +675,268 @@ const location = useLocation()
   }
 
   return (
-    <>
-      {hasLoadedWorkout && (
-    <section
-        className="plan-card run-linked-workout"
-        aria-label="Loaded workout"
-    >
-        <div className="panel-head">
-            <div>
-                <span className="note">
-                    {linkedSession ? 'SCHEDULED WORKOUT' : 'MANUAL WORKOUT'}
-                </span>
+    <main className="run-screen" aria-label="Run tracker">
+      <div className="run-map-layer" aria-label="Live GPS map">
+        <MapContainer
+          center={DEFAULT_CENTER}
+          zoom={11}
+          scrollWheelZoom
+          zoomControl={false}
+          style={{ height: '100%', width: '100%' }}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
 
-                <h2>
-                    {linkedSession
-                        ? TYPE_LABELS[linkedSession.type] ?? linkedSession.type
-                        : 'Manual Workout'}
-                </h2>
-            </div>
+          <FollowRunner center={mapCenter} />
 
-            <span className="pill pill-ok">
-                ✓ {linkedSession ? 'Session loaded' : 'Manual workout loaded'}
-            </span>
-        </div>
+          {mapSegments.map((segment, index) =>
+            segment.length > 1 ? (
+              <Polyline
+                key={`route-segment-${index}`}
+                positions={segment}
+                pathOptions={{ color: '#2563eb', weight: 6, lineCap: 'round' }}
+              />
+            ) : null,
+          )}
 
-        <p className="note">
-            {formatLongDate(
-                linkedSession
-                    ? linkedSession.scheduled_date
-                    : manualWorkout.date,
+          {mapCenter && (
+            <CircleMarker
+              center={mapCenter.coordinates}
+              radius={9}
+              pathOptions={{
+                color: '#ffffff',
+                weight: 3,
+                fillColor:
+                  gpsAccuracy !== null && gpsAccuracy > MAX_GPS_ACCURACY_METERS
+                    ? '#f59e0b'
+                    : '#2563eb',
+                fillOpacity: 1,
+              }}
+            />
+          )}
+        </MapContainer>
+      </div>
+
+      <div className="run-top-overlay">
+        <Link to="/dashboard" className="run-back-button" aria-label="Back to dashboard">
+          <span aria-hidden="true">‹</span>
+        </Link>
+
+        <div className="run-workout-chip">
+          <span className="run-workout-chip-icon" aria-hidden="true">
+            {linkedSession ? '▣' : manualWorkout ? '✎' : '⌁'}
+          </span>
+          <span>
+            <strong>
+              {linkedSession
+                ? TYPE_LABELS[linkedSession.type] ?? linkedSession.type
+                : manualWorkout
+                  ? 'Manual workout'
+                  : 'Free run'}
+            </strong>
+            {targetDistanceKm > 0 && (
+              <small>Target {targetDistanceKm.toFixed(2)} km</small>
             )}
-        </p>
-
-        <div className="run-linked-grid">
-            <div>
-                <span>Target distance</span>
-                <strong>{targetDistanceKm.toFixed(2)} km</strong>
-            </div>
-
-            <div>
-                <span>Estimated duration</span>
-                <strong>
-                    {linkedSession
-                        ? formatDuration(linkedSession.planned_duration_seconds)
-                        : 'Based on your GPS run'}
-                </strong>
-            </div>
-
-            <div>
-                <span>Target pace</span>
-                <strong>
-                    {linkedSession
-                        ? formatPace(
-                            linkedSession.planned_duration_seconds,
-                            targetDistanceKm,
-                        )
-                        : 'Not specified'}
-                </strong>
-            </div>
-
-            <div>
-                <span>Planned start</span>
-                <strong>
-                    {linkedSession
-                        ? formatPlannedStartTime(linkedSession.planned_start_time)
-                        : 'Flexible'}
-                </strong>
-            </div>
+          </span>
         </div>
 
-        {(linkedSession?.notes || manualWorkout?.notes) && (
-            <div className="run-linked-notes">
-                <strong>Workout instructions</strong>
-                <p>{linkedSession?.notes || manualWorkout?.notes}</p>
+        <span className={`run-status-chip run-status-${status}`} role="status">
+          <span className="run-status-dot" />
+          {status === 'idle' && 'Ready'}
+          {status === 'locating' && 'Finding GPS'}
+          {status === 'ready' && 'GPS ready'}
+          {status === 'recording' && 'Recording'}
+          {status === 'paused' && 'Paused'}
+          {status === 'finished' && (saved ? 'Saved' : 'Finished')}
+        </span>
+      </div>
+
+      {currentPosition && gpsAccuracy !== null && (
+        <div className="run-gps-indicator" role="status">
+          <span className="run-gps-indicator-dot" />
+          GPS accuracy · {Math.round(gpsAccuracy)} m
+        </div>
+      )}
+
+      <section className="run-bottom-panel" aria-label="Run controls and statistics">
+        <div className="run-live-stats">
+          <div className="run-live-stat run-live-stat-time">
+            <span>TIME</span>
+            <strong>{formatElapsed(displayedElapsedSeconds)}</strong>
+          </div>
+          <div className="run-live-stat">
+            <span>DISTANCE</span>
+            <strong>{distanceKm.toFixed(2)} <small>km</small></strong>
+          </div>
+          <div className="run-live-stat">
+            <span>AVG. PACE</span>
+            <strong>{formatPace(displayedElapsedSeconds, distanceKm).replace(' /km', '')} <small>/km</small></strong>
+          </div>
+        </div>
+
+        {targetDistanceKm > 0 && (
+          <div className="run-target-progress">
+            <div>
+              <span>Workout progress</span>
+              <strong>{distanceKm.toFixed(2)} / {targetDistanceKm.toFixed(2)} km</strong>
             </div>
+            <div className="run-target-track">
+              <span
+                style={{
+                  width: `${Math.min(100, (distanceKm / targetDistanceKm) * 100)}%`,
+                }}
+              />
+            </div>
+          </div>
         )}
 
-        <div className="run-linked-progress">
-            <div className="run-linked-progress-heading">
-                <span>Workout progress</span>
+        {error && <p className="run-error" role="alert">{error}</p>}
 
-                <strong>
-                    {distanceKm.toFixed(2)} / {targetDistanceKm.toFixed(2)} km
-                </strong>
-            </div>
-
-            <div
-                className="run-linked-progress-track"
-                role="progressbar"
-                aria-label="Workout distance progress"
-                aria-valuemin={0}
-                aria-valuemax={targetDistanceKm}
-                aria-valuenow={Math.min(distanceKm, targetDistanceKm)}
-            >
-                <div
-                    className="run-linked-progress-fill"
-                    style={{
-                        width: `${Math.min(
-                            100,
-                            (distanceKm / targetDistanceKm) * 100,
-                        )}%`,
-                    }}
-                />
-            </div>
-        </div>
-    </section>
-)}
-
-      <style>{`
-        .run-toolbar {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 16px;
-          flex-wrap: wrap;
-          margin-bottom: 16px;
-        }
-
-        .run-toolbar-copy {
-          flex: 1 1 280px;
-          min-width: 0;
-        }
-
-        .run-toolbar-copy .note {
-          margin: 0;
-        }
-
-        .run-controls {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          flex-wrap: wrap;
-        }
-
-        .run-action {
-          min-height: 44px;
-          padding: 0 16px;
-          border: 1px solid rgba(59, 130, 246, .28);
-          border-radius: 11px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 9px;
-          color: inherit;
-          background: rgba(59, 130, 246, .08);
-          font: inherit;
-          font-weight: 700;
-          line-height: 1.2;
-          text-decoration: none;
-          white-space: nowrap;
-          cursor: pointer;
-          transition: transform .16s ease, box-shadow .16s ease, background .16s ease, border-color .16s ease;
-        }
-
-        .run-action:hover:not(:disabled) {
-          transform: translateY(-1px);
-          border-color: rgba(59, 130, 246, .58);
-          box-shadow: 0 7px 18px rgba(37, 99, 235, .14);
-        }
-
-        .run-action:focus-visible {
-          outline: 3px solid rgba(59, 130, 246, .38);
-          outline-offset: 2px;
-        }
-
-        .run-action:disabled {
-          opacity: .52;
-          cursor: not-allowed;
-          transform: none;
-          box-shadow: none;
-        }
-
-        .run-action--primary {
-          color: #fff;
-          border-color: #3478ed;
-          background: linear-gradient(135deg, #4c93ff, #2563eb);
-          box-shadow: 0 5px 14px rgba(37, 99, 235, .22);
-        }
-
-        .run-action--primary:hover:not(:disabled) {
-          border-color: #1d4ed8;
-          background: linear-gradient(135deg, #3985f5, #1d4ed8);
-          box-shadow: 0 8px 20px rgba(37, 99, 235, .3);
-        }
-
-        .run-action--location {
-          color: #2563eb;
-          border-color: rgba(59, 130, 246, .42);
-          background: linear-gradient(135deg, rgba(59, 130, 246, .14), rgba(59, 130, 246, .06));
-        }
-
-        .run-action--secondary {
-          border-color: rgba(148, 163, 184, .28);
-          background: rgba(148, 163, 184, .08);
-        }
-
-        .run-action--danger {
-          color: #dc2626;
-          border-color: rgba(239, 68, 68, .34);
-          background: rgba(239, 68, 68, .08);
-        }
-
-        .run-action--quiet {
-          min-height: 42px;
-          padding-inline: 13px;
-          background: transparent;
-        }
-
-        .run-action-icon {
-          display: inline-flex;
-          flex: 0 0 auto;
-        }
-
-        .run-gps-spinner {
-          width: 17px;
-          height: 17px;
-          border: 2px solid currentColor;
-          border-right-color: transparent;
-          border-radius: 50%;
-          animation: run-gps-spin .75s linear infinite;
-        }
-
-        .run-location-note {
-          margin-top: 7px !important;
-          font-size: .88em;
-        }
-
-        @keyframes run-gps-spin {
-          to { transform: rotate(360deg); }
-        }
-
-        @media (max-width: 600px) {
-          .run-toolbar {
-            align-items: stretch;
-          }
-
-          .run-controls {
-            width: 100%;
-          }
-
-          .run-action {
-            flex: 1 1 auto;
-          }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .run-action,
-          .run-gps-spinner {
-            transition: none;
-            animation-duration: 1.5s;
-          }
-        }
-
-        .run-linked-workout {
-    margin-bottom: 16px;
-    border: 1px solid rgba(59, 130, 246, .35);
-}
-
-.run-linked-workout .panel-head {
-    align-items: center;
-    gap: 12px;
-}
-
-.run-linked-workout .panel-head h2 {
-    margin: 5px 0 0;
-}
-
-.run-linked-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    margin-top: 16px;
-}
-
-.run-linked-grid > div {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    padding: 13px;
-    border: 1px solid var(--border, #303b4d);
-    border-radius: 10px;
-    background: var(--surface-2, #202938);
-}
-
-.run-linked-grid span,
-.run-linked-progress-heading span {
-    color: var(--muted, #94a3b8);
-    font-size: .8rem;
-}
-
-.run-linked-grid strong,
-.run-linked-progress-heading strong {
-    font-size: 1rem;
-}
-
-.run-linked-notes {
-    margin-top: 14px;
-    padding: 13px;
-    border-left: 3px solid #3b82f6;
-    border-radius: 8px;
-    background: rgba(59, 130, 246, .08);
-}
-
-.run-linked-notes p {
-    margin: 6px 0 0;
-    color: var(--muted, #94a3b8);
-}
-
-.run-linked-progress {
-    margin-top: 18px;
-}
-
-.run-linked-progress-heading {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 9px;
-}
-
-.run-linked-progress-track {
-    height: 9px;
-    overflow: hidden;
-    border-radius: 20px;
-    background: var(--border, #303b4d);
-}
-
-.run-linked-progress-fill {
-    height: 100%;
-    border-radius: inherit;
-    background: #3b82f6;
-    transition: width .25s ease;
-}
-
-@media (max-width: 480px) {
-    .run-linked-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .run-linked-workout .panel-head {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-}
-      `}</style>
-
-      <div className="run-toolbar">
-        <div className="run-toolbar-copy">
-          <p className="note">
-            Wait for a precise GPS lock before starting. The timer and distance recording start together.
+        {plannedDistanceReached && !saved && (
+          <p className="run-feedback" role="status">
+            Target distance reached. Your run is ready to save.
           </p>
+        )}
 
-          {currentPosition && gpsAccuracy !== null && (
-            <p className="note run-location-note" role="status">
-              {gpsAccuracy <= MAX_GPS_ACCURACY_METERS
-                ? `GPS lock ready · accuracy about ${Math.round(gpsAccuracy)} m`
-                : gpsAccuracy <= MAX_START_ACCURACY_METERS
-                  ? `Approximate location · ${Math.round(gpsAccuracy)} m accuracy. Wait for GPS accuracy of 25 m or better before starting.`
-                  : `Location found · improving accuracy (${Math.round(gpsAccuracy)} m)`}
-            </p>
-          )}
-        </div>
+        {saved && (
+          <p className="run-feedback run-feedback-success" role="status">
+            {linkedSession
+              ? 'Run saved and linked to your calendar workout.'
+              : manualWorkout
+                ? 'Manual workout saved to your activity history.'
+                : 'Run saved to your activity history.'}
+          </p>
+        )}
 
-        <div className="run-controls">
-          <Link to="/activities" className="run-action run-action--quiet">
-            <span className="run-action-icon"><ActionIcon name="history" /></span>
-            Log a past run
-          </Link>
-
+        <div className="run-bottom-actions">
           {status === 'idle' && (
             <button
               type="button"
-              className="run-action run-action--location"
+              className="run-main-action run-main-action-blue"
               onClick={() => requestGps(false)}
-              aria-label="Find GPS location"
             >
-              <span className="run-action-icon"><ActionIcon name="gps" /></span>
+              <ActionIcon name="gps" />
               Find GPS
             </button>
           )}
 
           {status === 'locating' && (
-            <>
-              <button type="button" className="run-action run-action--location" disabled>
+            <div className="run-action-pair">
+              <button type="button" className="run-main-action run-main-action-blue" disabled>
                 <span className="run-gps-spinner" aria-hidden="true" />
-                Finding GPS...
+                Finding GPS…
               </button>
               <button
                 type="button"
-                className="run-action run-action--secondary"
+                className="run-small-action"
                 onClick={cancelGpsSearch}
               >
                 Cancel
               </button>
-            </>
+            </div>
           )}
 
           {status === 'ready' && (
             <button
               type="button"
-              className="run-action run-action--primary"
+              className="run-main-action run-main-action-green"
               onClick={startRun}
-              disabled={
-                gpsAccuracy === null ||
-                gpsAccuracy > MAX_START_ACCURACY_METERS
-              }
+              disabled={gpsAccuracy === null || gpsAccuracy > MAX_START_ACCURACY_METERS}
             >
-              <span className="run-action-icon"><ActionIcon name="play" /></span>
+              <ActionIcon name="play" />
               {resumeMode ? 'Resume run' : 'Start run'}
             </button>
           )}
 
           {status === 'recording' && (
-            <>
+            <div className="run-action-pair">
               <button
                 type="button"
-                className="run-action run-action--secondary"
+                className="run-main-action run-main-action-orange"
                 onClick={pauseRun}
               >
-                <span className="run-action-icon"><ActionIcon name="pause" /></span>
+                <ActionIcon name="pause" />
                 Pause
               </button>
               <button
                 type="button"
-                className="run-action run-action--danger"
+                className="run-main-action run-main-action-finish"
                 onClick={finishRun}
                 disabled={distanceKm <= 0}
-                title={distanceKm <= 0 ? 'Record some reliable distance before finishing.' : undefined}
+                title={distanceKm <= 0 ? 'Record some distance before finishing.' : 'Finish run'}
               >
-                <span className="run-action-icon"><ActionIcon name="finish" /></span>
-                Finish run
+                <ActionIcon name="finish" />
+                Finish
               </button>
-            </>
+            </div>
           )}
 
           {status === 'paused' && (
-            <button
-              type="button"
-              className="run-action run-action--primary"
-              onClick={() => requestGps(true)}
-            >
-              <span className="run-action-icon"><ActionIcon name="gps" /></span>
-              Find GPS to resume
-            </button>
+            <div className="run-action-pair">
+              <button
+                type="button"
+                className="run-main-action run-main-action-green"
+                onClick={() => requestGps(true)}
+              >
+                <ActionIcon name="gps" />
+                Resume
+              </button>
+              <button
+                type="button"
+                className="run-main-action run-main-action-finish"
+                onClick={finishRun}
+              >
+                <ActionIcon name="finish" />
+                Finish
+              </button>
+            </div>
           )}
 
           {status === 'finished' && !saved && (
-            <button
-              type="button"
-              className="run-action run-action--primary"
-              onClick={saveRun}
-              disabled={saving}
-            >
-              <span className="run-action-icon"><ActionIcon name="save" /></span>
-              {saving ? 'Saving...' : 'Save run'}
-            </button>
+            <div className="run-action-pair">
+              <button
+                type="button"
+                className="run-main-action run-main-action-green"
+                onClick={saveRun}
+                disabled={saving}
+              >
+                <ActionIcon name="save" />
+                {saving ? 'Saving run…' : 'Save run'}
+              </button>
+              <button
+                type="button"
+                className="run-small-action"
+                onClick={startAnotherRun}
+                disabled={saving}
+              >
+                Discard
+              </button>
+            </div>
           )}
 
           {status === 'finished' && saved && (
-            linkedSession ? (
-              <Link to="/calendar" className="run-action run-action--primary">View calendar</Link>
-            ) : (
-              <button
-                type="button"
-                className="run-action run-action--primary"
-                onClick={startAnotherRun}
-              >
-                <span className="run-action-icon"><ActionIcon name="again" /></span>
-                Start another run
-              </button>
-            )
+            <div className="run-action-pair">
+              {linkedSession ? (
+                <Link to="/calendar" className="run-main-action run-main-action-green">
+                  View calendar
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  className="run-main-action run-main-action-green"
+                  onClick={startAnotherRun}
+                >
+                  <ActionIcon name="again" />
+                  Start another run
+                </button>
+              )}
+              <Link to="/activities" className="run-small-action">Activity history</Link>
+            </div>
           )}
         </div>
-      </div>
-
-      <section className="plan-card" aria-label="Live run map">
-        <div
-          style={{
-            height: 'min(50vh, 460px)',
-            minHeight: '300px',
-            width: '100%',
-            overflow: 'hidden',
-            borderRadius: '12px',
-          }}
-        >
-          <MapContainer
-            center={DEFAULT_CENTER}
-            zoom={11}
-            scrollWheelZoom
-            style={{ height: '100%', width: '100%' }}
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-
-            <FollowRunner center={mapCenter} />
-
-            {mapSegments.map((segment, index) =>
-              segment.length > 1 ? (
-                <Polyline
-                  key={`route-segment-${index}`}
-                  positions={segment}
-                  pathOptions={{ color: '#3b82f6', weight: 5 }}
-                />
-              ) : null,
-            )}
-
-            {mapCenter && (
-              <CircleMarker
-                center={mapCenter.coordinates}
-                radius={9}
-                pathOptions={{
-                  color: '#ffffff',
-                  weight: 3,
-                  fillColor:
-                    gpsAccuracy !== null && gpsAccuracy > MAX_GPS_ACCURACY_METERS
-                      ? '#f59e0b'
-                      : '#3b82f6',
-                  fillOpacity: 1,
-                }}
-              />
-            )}
-          </MapContainer>
-        </div>
       </section>
-
-      <section className="status-strip" aria-label="Current run statistics">
-        <div className="strip-item">
-          <span className="strip-label">Run status</span>
-          <span className="strip-value" role="status">{statusText}</span>
-        </div>
-        <div className="strip-item">
-          <span className="strip-label">Time</span>
-          <span className="strip-value mono">{formatElapsed(displayedElapsedSeconds)}</span>
-        </div>
-        <div className="strip-item">
-          <span className="strip-label">Distance</span>
-          <span className="strip-value mono">{distanceKm.toFixed(2)} km</span>
-        </div>
-        <div className="strip-item">
-          <span className="strip-label">Average pace</span>
-          <span className="strip-value mono">{formatPace(displayedElapsedSeconds, distanceKm)}</span>
-        </div>
-      </section>
-
-      {error && <p className="error" role="alert">{error}</p>}
-      {plannedDistanceReached && !saved && (
-        <p className="note" role="status">
-          Planned distance reached. Recording has stopped. Save the run to log it and complete the calendar workout.
-        </p>
-      )}
-
-      {saved && (
-        <p className="note" role="status">
-          {linkedSession
-    ? 'Run saved and linked to this calendar workout. The workout is now marked complete.'
-    : manualWorkout
-        ? 'Manual workout completed and saved to your activity history.'
-        : 'Run saved to your activity history.'}
-        </p>
-      )}
-
-      <p className="note">
-        Keep this page open while recording. Map tiles © OpenStreetMap contributors.
-      </p>
-    </>
+    </main>
   )
 }

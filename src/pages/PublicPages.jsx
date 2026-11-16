@@ -48,6 +48,7 @@ function PublicShell({ children }) {
       <LiveBackground />
       <style>{`
         .public-site {
+          isolation: isolate;
           min-height: 100vh;
           color: var(--text, #edf2fb);
           background:

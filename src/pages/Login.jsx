@@ -256,7 +256,7 @@ export default function Login() {
   }
 
   return (
-    <div className="auth-split auth-focused">
+    <div className="auth-split auth-focused" style={{ isolation: 'isolate' }}>
       <LiveBackground />
       <style>
         {`

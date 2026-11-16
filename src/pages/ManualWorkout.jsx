@@ -25,6 +25,7 @@ export default function ManualWorkout() {
     const [form, setForm] = useState({
         date: getLocalDate(),
         distance: '5.0',
+        workoutType: '',
         notes: '',
     })
 
@@ -52,6 +53,11 @@ export default function ManualWorkout() {
             return
         }
 
+        if (!form.workoutType) {
+            setError('Please select a workout type.')
+            return
+        }
+
         if (
             !Number.isFinite(distance) ||
             distance <= 0 ||
@@ -66,6 +72,7 @@ export default function ManualWorkout() {
                 manualWorkout: {
                     date: form.date,
                     distance,
+                    workoutType: form.workoutType,
                     notes: form.notes.trim(),
                 },
             },
@@ -186,6 +193,34 @@ export default function ManualWorkout() {
                             </div>
 
                             <div className="manual-field">
+                                <label htmlFor="manual-workout-type">
+                                    <span className="manual-field-icon">◈</span>
+                                    Workout type
+                                </label>
+
+                                <select
+                                    id="manual-workout-type"
+                                    name="workoutType"
+                                    value={form.workoutType}
+                                    onChange={handleChange}
+                                    required
+                                >
+                                    <option value="">Select workout type</option>
+                                    <option value="easy">Easy</option>
+                                    <option value="long">Long</option>
+                                    <option value="tempo">Tempo</option>
+                                    <option value="threshold">Threshold</option>
+                                    <option value="interval">Interval</option>
+                                    <option value="recovery">Recovery</option>
+                                    <option value="race">Race</option>
+                                </select>
+
+                                <small>
+                                    Choose the training type so your run can be grouped correctly in Performance Metrics.
+                                </small>
+                            </div>
+
+                            <div className="manual-field">
                                 <div className="manual-label-row">
                                     <label htmlFor="manual-workout-notes">
                                         <span className="manual-field-icon">☷</span>
@@ -239,6 +274,17 @@ export default function ManualWorkout() {
                                             Number.isFinite(Number(form.distance))
                                                 ? `${Number(form.distance).toFixed(2)} km`
                                                 : 'Not specified'}
+                                        </strong>
+                                    </div>
+
+                                    <div className="manual-summary-item">
+                                        <span className="manual-summary-label">
+                                            <span>◈</span> Workout type
+                                        </span>
+                                        <strong>
+                                            {form.workoutType
+                                                ? form.workoutType.charAt(0).toUpperCase() + form.workoutType.slice(1)
+                                                : 'Not selected'}
                                         </strong>
                                     </div>
 
@@ -422,6 +468,7 @@ export default function ManualWorkout() {
                 }
 
                 .manual-field input,
+                .manual-field select,
                 .manual-field textarea {
                     box-sizing: border-box;
                     width: 100%;
@@ -435,9 +482,14 @@ export default function ManualWorkout() {
                     transition: border-color .18s ease, box-shadow .18s ease;
                 }
 
-                .manual-field input {
+                .manual-field input,
+                .manual-field select {
                     height: 45px;
                     padding: 0 13px;
+                }
+
+                .manual-field select {
+                    cursor: pointer;
                 }
 
                 .manual-field textarea {
@@ -448,6 +500,7 @@ export default function ManualWorkout() {
                 }
 
                 .manual-field input:focus,
+                .manual-field select:focus,
                 .manual-field textarea:focus {
                     outline: none;
                     border-color: var(--accent);
@@ -516,7 +569,7 @@ export default function ManualWorkout() {
 
                 .manual-summary-grid {
                     display: grid;
-                    grid-template-columns: .85fr .9fr 1.25fr;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
                     gap: 14px;
                 }
 

@@ -44,7 +44,7 @@ export default function ReportProblem() {
   }
 
   return (
-    <>
+    <div className="support-page">
       <div className="support-page-heading">
         <div>
           <p className="section-eyebrow">RunPlan help</p>
@@ -104,6 +104,6 @@ export default function ReportProblem() {
           </div>
         </form>
       </section>
-    </>
+    </div>
   )
 }

@@ -11,28 +11,30 @@ import { useEffect, useRef } from 'react'
 
 const PALETTE = {
   dark: {
-    node: [134, 174, 245],
-    link: [122, 162, 235],
+    // Cool blue nodes with restrained violet and teal ambient light.
+    node: [125, 177, 255],
+    link: [91, 145, 226],
     orbs: [
-      [110, 150, 230, 0.3],
-      [150, 130, 226, 0.22],
-      [92, 200, 190, 0.16],
+      [55, 119, 225, 0.20],
+      [125, 91, 220, 0.14],
+      [38, 174, 184, 0.11],
     ],
-    nodeAlpha: 1,
-    linkAlpha: 0.62,
-    haloAlpha: 0.16,
+    nodeAlpha: 0.94,
+    linkAlpha: 0.48,
+    haloAlpha: 0.13,
   },
   light: {
-    node: [37, 99, 235],
-    link: [59, 110, 220],
+    // Clear blue connections with subtle violet and teal highlights.
+    node: [45, 112, 225],
+    link: [63, 119, 211],
     orbs: [
-      [80, 130, 235, 0.28],
-      [140, 110, 230, 0.2],
-      [40, 170, 160, 0.15],
+      [76, 137, 231, 0.16],
+      [135, 111, 214, 0.11],
+      [45, 161, 164, 0.09],
     ],
-    nodeAlpha: 0.9,
-    linkAlpha: 0.5,
-    haloAlpha: 0.14,
+    nodeAlpha: 0.86,
+    linkAlpha: 0.42,
+    haloAlpha: 0.10,
   },
 }
 

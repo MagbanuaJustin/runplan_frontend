@@ -21,10 +21,13 @@ import SummaryReport from './pages/SummaryReport.jsx'
 import ReportProblem from './pages/ReportProblem.jsx'
 import MyReports from './pages/MyReports.jsx'
 import SupportConsole from './pages/SupportConsole.jsx'
+import RunnerDetails from './pages/RunnerDetails.jsx'
 import DownloadPage from './pages/DownloadPage.jsx'
 import ManualWorkout from './pages/ManualWorkout.jsx'
 import HelpGuides from './pages/HelpGuides.jsx'
 import AlertRules from './pages/AlertRules.jsx'
+import PerformanceMetrics from './pages/PerformanceMetrics.jsx'
+
 
 import {
     LandingPage,
@@ -80,6 +83,10 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
                 <Route element={<Layout />}>
                     <Route path="/dashboard" element={<Dashboard />} />
+                    <Route
+                        path="/performance-metrics"
+                        element={<PerformanceMetrics />}
+                    />
                     <Route path="/calendar" element={<Calendar />} />
                     <Route path="/activities" element={<Activities />} />
 
@@ -122,6 +129,7 @@ export default function App() {
                     <Route element={<AdminRoute />}>
                         <Route path="/status" element={<Status />} />
                         <Route path="/support" element={<SupportConsole />} />
+                        <Route path="/support/users/:userId" element={<RunnerDetails />} />
                     </Route>
                 </Route>
             </Route>

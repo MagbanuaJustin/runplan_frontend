@@ -2526,3 +2526,150 @@ a.btn-secondary:hover {
     height: 96px;
   }
 }
+
+/* Dedicated admin runner details page */
+.support-runner-page {
+  min-width: 0;
+}
+
+.support-runner-page-actions {
+  margin-top: 0;
+  justify-content: flex-end;
+}
+
+.support-runner-identity {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 16px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-surface);
+}
+
+.support-runner-identity h2 {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.support-detail-dl-row {
+  display: contents;
+}
+
+.support-session-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+
+.support-detail-plan .table-wrap {
+  margin-top: 12px;
+}
+
+.support-detail-plan table {
+  min-width: 760px;
+}
+
+@media (max-width: 760px) {
+  .support-runner-page-actions {
+    justify-content: flex-start;
+  }
+
+  .support-runner-identity {
+    align-items: flex-start;
+  }
+}
+
+
+/* ------------------------------------------------------------------
+   Batch 3 - AI assistant overlay
+   Keep the AI launcher beside the theme toggle in the workspace header.
+   The assistant opens as a floating drawer and no longer reserves a
+   permanent third grid column, so the main workspace keeps its width.
+------------------------------------------------------------------ */
+
+.app-frame.ai-layout,
+.app-frame.ai-layout.ai-closed {
+  grid-template-columns: 242px minmax(0, 1fr);
+}
+
+.rp-ai-panel {
+  position: fixed;
+  z-index: 70;
+  top: 58px;
+  right: 0;
+  bottom: 0;
+  left: auto;
+  width: min(var(--rp-ai-width, 360px), calc(100vw - 24px));
+  height: auto;
+  display: flex;
+  grid-column: auto;
+  grid-row: auto;
+  overflow: hidden;
+  background: var(--bg-sidebar);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+}
+
+.app-frame.ai-layout.ai-closed .rp-ai-panel {
+  display: none;
+}
+
+.rp-ai-resize-handle {
+  display: block;
+}
+
+.rp-ai-backdrop {
+  position: fixed;
+  z-index: 60;
+  inset: 58px 0 0;
+  display: block;
+  border: 0;
+  background: rgba(0, 0, 0, 0.28);
+  cursor: default;
+}
+
+.rp-header-actions {
+  position: relative;
+  z-index: 80;
+}
+
+@media (max-width: 920px) {
+
+  .app-frame.ai-layout,
+  .app-frame.ai-layout.ai-closed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rp-ai-panel {
+    top: 58px;
+    right: 0;
+    bottom: 0;
+    width: min(92vw, 390px);
+    height: calc(100vh - 58px);
+    height: calc(100dvh - 58px);
+    border-left: 1px solid var(--border);
+  }
+
+  .rp-ai-resize-handle {
+    display: none;
+  }
+
+  .rp-ai-backdrop {
+    inset: 58px 0 0;
+  }
+
+  .rp-header-actions {
+    gap: 7px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rp-ai-panel {
+    transition: none;
+  }
+}

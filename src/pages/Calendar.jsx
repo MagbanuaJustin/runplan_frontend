@@ -49,6 +49,131 @@ function formatStartTime(hhmmss) {
   return `${h12}:${String(m).padStart(2, '0')} ${suffix}`
 }
 
+
+function CalendarGuidance() {
+  return (
+    <section className="calendar-guidance" aria-labelledby="calendar-guidance-title">
+      <style>{`
+        .calendar-guidance {
+          position: relative;
+          display: grid;
+          grid-template-columns: 38px minmax(0, 1fr);
+          gap: 14px;
+          align-items: start;
+          margin: 14px 0 18px;
+          padding: 17px 19px;
+          overflow: hidden;
+          border: 1px solid rgba(96, 165, 250, .28);
+          border-radius: 14px;
+          background:
+            radial-gradient(circle at 0% 0%, rgba(59, 130, 246, .16), transparent 42%),
+            linear-gradient(135deg, rgba(25, 39, 61, .96), rgba(18, 26, 40, .96));
+          box-shadow: 0 8px 28px rgba(0, 0, 0, .14), inset 0 1px 0 rgba(255,255,255,.035);
+        }
+
+        .calendar-guidance-icon {
+          display: grid;
+          place-items: center;
+          width: 38px;
+          height: 38px;
+          border: 1px solid rgba(125, 175, 255, .32);
+          border-radius: 11px;
+          color: #a8ccff;
+          background: rgba(96, 165, 250, .12);
+          box-shadow: 0 0 20px rgba(59, 130, 246, .13);
+          font-size: 19px;
+          font-weight: 800;
+        }
+
+        .calendar-guidance h2 {
+          margin: 0 0 6px;
+          color: var(--text, #f3f6fb);
+          font-size: 15px;
+          line-height: 1.4;
+        }
+
+        .calendar-guidance p {
+          margin: 0;
+          color: var(--text-secondary, #aab6c8);
+          font-size: 12px;
+          line-height: 1.6;
+        }
+
+        .calendar-guidance-points {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 7px 16px;
+          margin-top: 11px;
+        }
+
+        .calendar-guidance-points span {
+          color: #c4d8f7;
+          font-size: 11px;
+          line-height: 1.5;
+        }
+
+        .calendar-guidance-points span::before {
+          content: "✓";
+          margin-right: 6px;
+          color: #7db4ff;
+          font-weight: 800;
+        }
+
+        .calendar-guidance-note {
+          margin-top: 10px !important;
+          color: #8fa4c2 !important;
+          font-size: 11px !important;
+        }
+
+        @media (max-width: 600px) {
+          .calendar-guidance {
+            grid-template-columns: 1fr;
+            gap: 10px;
+            padding: 15px;
+          }
+
+          .calendar-guidance-icon {
+            width: 34px;
+            height: 34px;
+          }
+        }
+      `}</style>
+
+      <div className="calendar-guidance-icon" aria-hidden="true">
+        i
+      </div>
+
+      <div>
+        <h2 id="calendar-guidance-title">
+          Your training plan is a guide — you are in control
+        </h2>
+
+        <p>
+          Your workouts are recommendations generated from your runner profile
+          and goals, not mandatory sessions. Review the schedule and make it fit
+          your preferences, availability, experience, and recovery needs.
+        </p>
+
+        <div className="calendar-guidance-points">
+          <span>
+            Customize workout type, distance, duration, start time, and notes
+            using Edit workout.
+          </span>
+          <span>Use Move date when another day works better.</span>
+          <span>Skip a session when needed; you can return to your plan later.</span>
+        </div>
+
+        <p className="calendar-guidance-note">
+          Listen to your body. Do not force a workout through pain, illness, or
+          unusual fatigue. If you are unsure about a change, choose a comfortable
+          option and consider guidance from a qualified running or healthcare
+          professional.
+        </p>
+      </div>
+    </section>
+  )
+}
+
 export default function Calendar() {
   const [data, setData] = useState(null)
   const [runs, setRuns] = useState([])
@@ -354,6 +479,8 @@ export default function Calendar() {
       <>
         <h1>Calendar</h1>
 
+        <CalendarGuidance />
+
         <CalendarSyncCard />
 
         <section className="plan-card">
@@ -376,6 +503,10 @@ export default function Calendar() {
 
   const { start_date, end_date } = data.plan
   const cells = monthGrid(month.y, month.m)
+  const weekRows = Array.from(
+    { length: Math.ceil(cells.length / 7) },
+    (_, index) => cells.slice(index * 7, index * 7 + 7)
+  )
   const session = byDate.get(selected)
   const run = session
     ? runBySession.get(session.id)
@@ -416,126 +547,339 @@ export default function Calendar() {
     <>
       <h1>Calendar</h1>
 
+      <CalendarGuidance />
+
       <CalendarSyncCard />
 
-      <div className="split-workspace">
+      <section className="runplan-calendar-board" aria-label="Monthly training calendar">
+        <style>{`
+          .runplan-calendar-board {
+            margin-top: 18px;
+            padding: 18px;
+            border: 1px solid var(--border, #303b4b);
+            border-radius: 16px;
+            background: var(--surface, #111923);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, .12);
+            min-width: 0;
+          }
 
-        {/* MONTHLY CALENDAR */}
+          .runplan-calendar-board .cal-nav {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+          }
 
-        <section
-          className="plan-card"
-          aria-label="Monthly schedule"
-        >
-          <div className="cal-nav">
-            <button
-              type="button"
-              className="cal-btn"
-              aria-label="Previous month"
-              disabled={
-                monthIndex(month) <=
-                monthIndex(monthOf(start_date))
-              }
-              onClick={() => shift(-1)}
-            >
-              &lsaquo;
-            </button>
+          .runplan-calendar-board .cal-nav h2 {
+            margin: 0 8px;
+            min-width: 150px;
+            font-size: 21px;
+            font-weight: 750;
+          }
 
-            <h2 aria-live="polite">
-              {monthTitle(month)}
-            </h2>
+          .runplan-calendar-board .cal-nav .cal-today {
+            margin-left: auto;
+          }
 
-            <button
-              type="button"
-              className="cal-btn"
-              aria-label="Next month"
-              disabled={
-                monthIndex(month) >=
-                monthIndex(monthOf(end_date))
-              }
-              onClick={() => shift(1)}
-            >
-              &rsaquo;
-            </button>
+          .runplan-calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr)) minmax(112px, .72fr);
+            gap: 4px;
+            min-width: 0;
+          }
 
-            <button
-              type="button"
-              className="cal-btn cal-today"
-              onClick={goToday}
-            >
-              Today
-            </button>
-          </div>
+          .runplan-calendar-weekday {
+            min-height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary, #91a0b5);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: .02em;
+          }
 
-          <div className="cal-head" aria-hidden="true">
-            {WEEKDAYS.map((d) => (
-              <span key={d}>{d}</span>
-            ))}
-          </div>
+          .runplan-calendar-weekday.total {
+            color: var(--accent-bright, #78aaff);
+          }
 
-          <div className="cal-grid">
-            {cells.map((date, i) => {
-              if (!date) {
-                return (
-                  <span
-                    key={`e${i}`}
-                    className="day empty"
-                  />
-                )
-              }
+          .runplan-calendar-day {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: flex-start;
+            gap: 10px;
+            min-width: 0;
+            min-height: 112px;
+            padding: 10px;
+            border: 1px solid var(--border, #303b4b);
+            border-radius: 7px;
+            background: var(--bg, #080d14);
+            color: var(--text, #f3f6fb);
+            text-align: left;
+            cursor: pointer;
+            transition: border-color .16s ease, background .16s ease, transform .16s ease;
+          }
 
-              const s = byDate.get(date)
+          .runplan-calendar-day:hover {
+            border-color: var(--accent, #4f8cff);
+            background: var(--surface-2, #1b2635);
+            transform: translateY(-1px);
+          }
 
-              const label = s
-                ? `${formatLongDate(date)}: ${TYPE_LABELS[s.type]}, ${s.planned_distance_km} km, ${STATUS_LABELS[s.status]}`
-                : `${formatLongDate(date)}: rest day`
+          .runplan-calendar-day[aria-pressed="true"] {
+            border: 1px solid var(--accent-bright, #78aaff);
+            box-shadow: inset 0 0 0 1px var(--accent-bright, #78aaff), 0 0 0 2px rgba(79, 140, 255, .10);
+            background: var(--surface-2, #1b2635);
+          }
 
-              return (
-                <button
-                  key={date}
-                  type="button"
-                  className={`day status-${s?.status ?? 'none'}${date === today ? ' today' : ''}`}
-                  aria-pressed={date === selected}
-                  aria-current={
-                    date === today ? 'date' : undefined
-                  }
-                  aria-label={label}
-                  onClick={() => selectDay(date)}
-                >
-                  <span className="day-num">
-                    {Number(date.slice(8))}
-                  </span>
+          .runplan-calendar-day.outside-month {
+            opacity: .42;
+            background: var(--surface-2, #1b2635);
+          }
 
-                  {s && (
-                    <span
-                      className="day-chip"
-                      aria-hidden="true"
-                    >
-                      {TYPE_SHORT[s.type]} {s.planned_distance_km}
-                      {MARKS[s.status]
-                        ? ` ${MARKS[s.status]}`
-                        : ''}
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
+          .runplan-calendar-day.today .runplan-calendar-date {
+            color: var(--accent-bright, #78aaff);
+            font-weight: 850;
+          }
 
-          <p
-            className="note"
-            style={{
-              marginBottom: 0,
-              marginTop: 12,
-            }}
+          .runplan-calendar-date {
+            align-self: flex-end;
+            color: var(--text-secondary, #aab6c8);
+            font-size: 12px;
+            font-weight: 700;
+          }
+
+          .runplan-calendar-session {
+            display: block;
+            width: 100%;
+            padding: 7px 8px;
+            border-radius: 6px;
+            background: rgba(79, 140, 255, .13);
+            border-left: 3px solid var(--accent-bright, #78aaff);
+            color: var(--text, #e8eef8);
+            font-size: 11px;
+            line-height: 1.45;
+            overflow-wrap: anywhere;
+          }
+
+          .runplan-calendar-session.status-completed {
+            border-left-color: #34c995;
+            background: rgba(52, 201, 149, .12);
+          }
+
+          .runplan-calendar-session.status-skipped {
+            border-left-color: #e5a642;
+            background: rgba(229, 166, 66, .12);
+          }
+
+          .runplan-calendar-session.status-missed {
+            border-left-color: #ef6b75;
+            background: rgba(239, 107, 117, .12);
+          }
+
+          .runplan-calendar-rest {
+            color: var(--text-muted, #738198);
+            font-size: 11px;
+          }
+
+          .runplan-calendar-week-total {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 8px;
+            min-width: 0;
+            min-height: 112px;
+            padding: 10px;
+            border: 1px solid var(--border, #303b4b);
+            border-radius: 7px;
+            background: var(--surface-2, #1b2635);
+          }
+
+          .runplan-calendar-week-total strong {
+            font-size: 12px;
+            color: var(--text, #f3f6fb);
+          }
+
+          .runplan-calendar-week-total span {
+            color: var(--text-secondary, #aab6c8);
+            font-size: 11px;
+            line-height: 1.5;
+          }
+
+          .runplan-calendar-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 18px;
+            margin: 16px 0 0;
+            color: var(--text-secondary, #aab6c8);
+            font-size: 12px;
+          }
+
+          .runplan-calendar-legend strong {
+            color: var(--text, #f3f6fb);
+          }
+
+          .split-workspace {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 18px;
+            margin-top: 18px;
+          }
+
+          @media (max-width: 900px) {
+            .runplan-calendar-board {
+              padding: 12px;
+              overflow-x: auto;
+            }
+
+            .runplan-calendar-grid {
+              min-width: 760px;
+              grid-template-columns: repeat(7, minmax(76px, 1fr)) minmax(104px, .72fr);
+            }
+
+            .runplan-calendar-day,
+            .runplan-calendar-week-total {
+              min-height: 96px;
+              padding: 8px;
+            }
+          }
+        `}</style>
+
+        <div className="cal-nav">
+          <button
+            type="button"
+            className="cal-btn"
+            aria-label="Previous month"
+            disabled={
+              monthIndex(month) <=
+              monthIndex(monthOf(start_date))
+            }
+            onClick={() => shift(-1)}
           >
-            E easy &middot; L long &middot; T tempo &middot;
-            I intervals &middot; TH threshold &middot;
-            RACE race day &nbsp;|&nbsp;
-            {MARKS.completed} done &middot;
-            {MARKS.skipped} skipped &middot; ! missed
-          </p>
-        </section>
+            &lsaquo;
+          </button>
 
+          <h2 aria-live="polite">
+            {monthTitle(month)}
+          </h2>
+
+          <button
+            type="button"
+            className="cal-btn"
+            aria-label="Next month"
+            disabled={
+              monthIndex(month) >=
+              monthIndex(monthOf(end_date))
+            }
+            onClick={() => shift(1)}
+          >
+            &rsaquo;
+          </button>
+
+          <button
+            type="button"
+            className="cal-btn cal-today"
+            onClick={goToday}
+          >
+            Today
+          </button>
+        </div>
+
+        <div className="runplan-calendar-grid">
+          {WEEKDAYS.map((day) => (
+            <div className="runplan-calendar-weekday" key={day}>
+              {day}
+            </div>
+          ))}
+          <div className="runplan-calendar-weekday total">Week total</div>
+
+          {weekRows.map((week, weekIndex) => {
+            const weekSessions = week
+              .filter(Boolean)
+              .map((date) => byDate.get(date))
+              .filter(Boolean)
+            const weekDistance = weekSessions.reduce(
+              (total, item) => total + Number(item.planned_distance_km || 0),
+              0
+            )
+
+            return (
+              <div className="runplan-calendar-week-fragment" key={`week-${weekIndex}`} style={{ display: "contents" }}>
+                {week.map((date, dayIndex) => {
+                  if (!date) {
+                    return (
+                      <div
+                        key={`empty-${weekIndex}-${dayIndex}`}
+                        className="runplan-calendar-day outside-month"
+                        aria-hidden="true"
+                      />
+                    )
+                  }
+
+                  const daySession = byDate.get(date)
+                  const isOutsideMonth = date.slice(0, 7) !==
+                    `${month.y}-${String(month.m + 1).padStart(2, '0')}`
+
+                  const label = daySession
+                    ? `${formatLongDate(date)}: ${TYPE_LABELS[daySession.type]}, ${daySession.planned_distance_km} km, ${STATUS_LABELS[daySession.status]}`
+                    : `${formatLongDate(date)}: rest day`
+
+                  return (
+                    <button
+                      key={date}
+                      type="button"
+                      className={`runplan-calendar-day status-${daySession?.status ?? 'none'}${date === today ? ' today' : ''}${isOutsideMonth ? ' outside-month' : ''}`}
+                      aria-pressed={date === selected}
+                      aria-current={date === today ? 'date' : undefined}
+                      aria-label={label}
+                      onClick={() => selectDay(date)}
+                    >
+                      <span className="runplan-calendar-date">
+                        {Number(date.slice(8))}
+                      </span>
+
+                      {daySession ? (
+                        <span className={`runplan-calendar-session status-${daySession.status}`}>
+                          <strong>{TYPE_SHORT[daySession.type]}</strong>
+                          {' · '}
+                          {daySession.planned_distance_km} km
+                          {MARKS[daySession.status]
+                            ? ` ${MARKS[daySession.status]}`
+                            : ''}
+                        </span>
+                      ) : (
+                        <span className="runplan-calendar-rest">Rest day</span>
+                      )}
+                    </button>
+                  )
+                })}
+
+                <div className="runplan-calendar-week-total" aria-label={`Week ${weekIndex + 1} summary`}>
+                  <strong>Week {weekIndex + 1}</strong>
+                  <span>{weekSessions.length} {weekSessions.length === 1 ? 'workout' : 'workouts'}</span>
+                  <strong>{Math.round(weekDistance * 10) / 10} km</strong>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="runplan-calendar-legend">
+          <span><strong>E</strong> Easy</span>
+          <span><strong>L</strong> Long</span>
+          <span><strong>T</strong> Tempo</span>
+          <span><strong>I</strong> Intervals</span>
+          <span><strong>TH</strong> Threshold</span>
+          <span><strong>RACE</strong> Race day</span>
+          <span><strong>✓</strong> Completed</span>
+          <span><strong>✕</strong> Skipped</span>
+          <span><strong>!</strong> Missed</span>
+        </div>
+      </section>
+
+      <div className="split-workspace">
         {/* SELECTED WORKOUT DETAILS */}
 
         <section
@@ -656,7 +1000,15 @@ export default function Calendar() {
               {/* WORKOUT ACTIONS */}
 
               {session.status !== 'completed' && (
-                <div className="btn-row">
+                <div
+                  className="btn-row"
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                    gap: '10px',
+                    width: '100%',
+                  }}
+                >
                   <Link
                     className="btn btn-primary"
                     to={`/run?session=${session.id}`}

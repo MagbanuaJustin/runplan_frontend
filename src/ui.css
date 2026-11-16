@@ -1253,3 +1253,1677 @@ body::after {
     height: 50px;
   }
 }
+
+/* ==========================================================================
+   Batch 1 — FX Replay-inspired application shell
+   Compact desktop icon rail, centered workspace, and no right guidance column.
+   The mobile navigation drawer remains expanded and text-based.
+   ========================================================================== */
+
+@media (min-width: 921px) {
+  .app-frame {
+    grid-template-columns: 76px minmax(0, 1fr);
+  }
+
+  .app-frame.ai-layout {
+    grid-template-columns: 76px minmax(0, 1fr) var(--rp-ai-width, 360px);
+  }
+
+  .app-frame.ai-layout.ai-closed {
+    grid-template-columns: 76px minmax(0, 1fr);
+  }
+
+  .sidebar {
+    width: 76px;
+    min-width: 76px;
+    align-items: center;
+    padding: 16px 9px 14px;
+    gap: 8px;
+  }
+
+  .sidebar-brand {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 4px 0 18px;
+  }
+
+  .sidebar-brand .brand {
+    justify-content: center;
+    gap: 0;
+  }
+
+  .sidebar-brand .brand-word {
+    display: none;
+  }
+
+  .sidebar-brand .brand-mark {
+    width: 38px;
+    height: 38px;
+  }
+
+  .sidebar-nav {
+    width: 100%;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .nav-group {
+    width: 100%;
+    justify-items: center;
+    gap: 6px;
+  }
+
+  .nav-group-label {
+    display: none;
+  }
+
+  .nav-link,
+  .nav-link:visited {
+    width: 48px;
+    height: 46px;
+    min-height: 46px;
+    justify-content: center;
+    gap: 0;
+    padding: 0;
+    border-radius: 10px;
+    font-size: 0;
+  }
+
+  .nav-link .nav-icon {
+    width: 21px;
+    height: 21px;
+  }
+
+  .nav-link>span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .nav-link[aria-current="page"] {
+    border-color: var(--border-accent);
+    background: var(--bg-active);
+  }
+
+  .sidebar-footer {
+    width: 100%;
+    justify-items: center;
+    gap: 10px;
+    margin-top: auto;
+    padding-top: 14px;
+  }
+
+  .user-pill {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .user-meta {
+    display: none;
+  }
+
+  .user-avatar {
+    width: 36px;
+    height: 36px;
+  }
+
+  .logout-btn {
+    width: 46px;
+    height: 42px;
+    min-height: 42px;
+    padding: 0;
+    gap: 0;
+  }
+
+  .logout-btn>span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .workspace-content {
+    display: block;
+    width: 100%;
+    max-width: 1380px;
+    margin: 0 auto;
+    padding: 0 clamp(20px, 2.2vw, 36px);
+  }
+
+  .workspace-content .shell {
+    width: 100%;
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 24px 0 56px;
+  }
+
+  .workspace-header {
+    padding-left: clamp(20px, 2.2vw, 36px);
+    padding-right: clamp(20px, 2.2vw, 36px);
+  }
+}
+
+/* Preserve the expanded drawer and labels on tablets and phones. */
+@media (max-width: 920px) {
+  .sidebar {
+    width: 260px;
+    min-width: 0;
+    align-items: stretch;
+  }
+
+  .sidebar-brand {
+    display: block;
+    width: auto;
+    padding: 4px 10px 18px;
+  }
+
+  .sidebar-brand .brand {
+    justify-content: flex-start;
+    gap: 10px;
+  }
+
+  .sidebar-brand .brand-word {
+    display: inline;
+  }
+
+  .sidebar-brand .brand-mark {
+    width: 34px;
+    height: 34px;
+  }
+
+  .sidebar-nav {
+    align-items: stretch;
+  }
+
+  .nav-group {
+    width: auto;
+    justify-items: stretch;
+  }
+
+  .nav-group-label {
+    display: block;
+  }
+
+  .nav-link,
+  .nav-link:visited {
+    width: auto;
+    height: 38px;
+    min-height: 38px;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 0 11px;
+    font-size: 13.5px;
+  }
+
+  .nav-link .nav-icon {
+    width: 17px;
+    height: 17px;
+  }
+
+  .nav-link>span {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+  }
+
+  .sidebar-footer {
+    width: auto;
+    justify-items: stretch;
+  }
+
+  .user-pill {
+    justify-content: flex-start;
+    padding: 0 4px;
+  }
+
+  .user-meta {
+    display: grid;
+  }
+
+  .logout-btn {
+    width: 100%;
+    height: 38px;
+    min-height: 38px;
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .logout-btn>span {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+  }
+
+  .workspace-content {
+    display: block;
+    padding: 0 16px;
+  }
+
+  .workspace-content .shell {
+    width: 100%;
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 20px 0 56px;
+  }
+}
+
+
+/* ==========================================================================
+   Batch 1 refinement — expandable desktop navigation rail
+   The compact rail is slightly wider, and expands over the workspace on hover
+   or keyboard focus without changing the dashboard grid width.
+   ========================================================================== */
+
+@media (min-width: 921px) and (hover: hover) and (pointer: fine) {
+  .app-frame {
+    grid-template-columns: 90px minmax(0, 1fr);
+  }
+
+  .app-frame.ai-layout,
+  .app-frame.ai-layout.ai-closed {
+    grid-template-columns: 90px minmax(0, 1fr);
+  }
+
+  .sidebar {
+    position: sticky;
+    z-index: 60;
+    width: 90px;
+    min-width: 90px;
+    padding: 18px 10px 14px;
+    overflow-x: visible;
+    overflow-y: auto;
+    align-items: center;
+    transition:
+      width 0.22s ease,
+      min-width 0.22s ease,
+      padding 0.22s ease,
+      box-shadow 0.22s ease;
+  }
+
+  .sidebar:hover,
+  .sidebar:focus-within {
+    width: 252px;
+    min-width: 252px;
+    align-items: stretch;
+    padding: 18px 14px 14px;
+    background: var(--bg-sidebar);
+    border-right-color: var(--border-strong);
+    box-shadow: 14px 0 34px rgba(0, 0, 0, 0.34);
+  }
+
+  .sidebar-brand {
+    justify-content: center;
+    padding: 4px 0 18px;
+    transition: padding 0.22s ease;
+  }
+
+  .sidebar:hover .sidebar-brand,
+  .sidebar:focus-within .sidebar-brand {
+    justify-content: flex-start;
+    padding: 4px 8px 18px;
+  }
+
+  .sidebar-brand .brand {
+    justify-content: center;
+    gap: 0;
+    white-space: nowrap;
+  }
+
+  .sidebar:hover .sidebar-brand .brand,
+  .sidebar:focus-within .sidebar-brand .brand {
+    justify-content: flex-start;
+    gap: 10px;
+  }
+
+  .sidebar-brand .brand-mark {
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    transition:
+      width 0.22s ease,
+      height 0.22s ease,
+      flex-basis 0.22s ease;
+  }
+
+  .sidebar:hover .sidebar-brand .brand-mark,
+  .sidebar:focus-within .sidebar-brand .brand-mark {
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
+  }
+
+  .sidebar-brand .brand-word {
+    display: inline-block;
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition:
+      max-width 0.22s ease,
+      opacity 0.16s ease;
+  }
+
+  .sidebar:hover .sidebar-brand .brand-word,
+  .sidebar:focus-within .sidebar-brand .brand-word {
+    max-width: 150px;
+    opacity: 1;
+  }
+
+  .sidebar-nav {
+    align-items: center;
+    gap: 12px;
+  }
+
+  .sidebar:hover .sidebar-nav,
+  .sidebar:focus-within .sidebar-nav {
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .sidebar .nav-group {
+    width: 100%;
+    justify-items: center;
+    gap: 7px;
+  }
+
+  .sidebar:hover .nav-group,
+  .sidebar:focus-within .nav-group {
+    justify-items: stretch;
+    gap: 3px;
+  }
+
+  .sidebar .nav-group-label {
+    display: block;
+    width: 100%;
+    max-height: 0;
+    padding: 0 10px;
+    margin: 0;
+    opacity: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    transition:
+      max-height 0.2s ease,
+      opacity 0.16s ease,
+      padding 0.2s ease;
+  }
+
+  .sidebar:hover .nav-group-label,
+  .sidebar:focus-within .nav-group-label {
+    max-height: 30px;
+    padding: 0 10px 4px;
+    opacity: 1;
+  }
+
+  .sidebar .nav-link,
+  .sidebar .nav-link:visited {
+    width: 54px;
+    height: 48px;
+    min-height: 48px;
+    justify-content: center;
+    gap: 0;
+    padding: 0;
+    border-radius: 10px;
+    font-size: 0;
+    transition:
+      width 0.22s ease,
+      height 0.22s ease,
+      background-color 0.16s ease,
+      border-color 0.16s ease,
+      color 0.16s ease;
+  }
+
+  .sidebar .nav-link .nav-icon {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
+  }
+
+  .sidebar .nav-link>span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .sidebar:hover .nav-link,
+  .sidebar:hover .nav-link:visited,
+  .sidebar:focus-within .nav-link,
+  .sidebar:focus-within .nav-link:visited {
+    width: 100%;
+    height: 40px;
+    min-height: 40px;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 0 11px;
+    font-size: 13.5px;
+  }
+
+  .sidebar:hover .nav-link .nav-icon,
+  .sidebar:focus-within .nav-link .nav-icon {
+    width: 17px;
+    height: 17px;
+    flex-basis: 17px;
+  }
+
+  .sidebar:hover .nav-link>span,
+  .sidebar:focus-within .nav-link>span {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 0;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    white-space: nowrap;
+  }
+
+  .sidebar-footer {
+    width: 100%;
+    justify-items: center;
+    gap: 10px;
+    margin-top: auto;
+  }
+
+  .sidebar:hover .sidebar-footer,
+  .sidebar:focus-within .sidebar-footer {
+    justify-items: stretch;
+  }
+
+  .sidebar .user-pill {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .sidebar:hover .user-pill,
+  .sidebar:focus-within .user-pill {
+    justify-content: flex-start;
+    padding: 0 4px;
+  }
+
+  .sidebar .user-meta {
+    display: block;
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    transition:
+      max-width 0.22s ease,
+      opacity 0.16s ease;
+  }
+
+  .sidebar:hover .user-meta,
+  .sidebar:focus-within .user-meta {
+    max-width: 175px;
+    opacity: 1;
+  }
+
+  .sidebar .user-email {
+    max-width: 170px;
+  }
+
+  .sidebar .logout-btn {
+    width: 54px;
+    height: 46px;
+    min-height: 46px;
+    padding: 0;
+    gap: 0;
+    justify-content: center;
+  }
+
+  .sidebar:hover .logout-btn,
+  .sidebar:focus-within .logout-btn {
+    width: 100%;
+    height: 40px;
+    min-height: 40px;
+    padding: 0 12px;
+    gap: 8px;
+    justify-content: center;
+  }
+
+  .sidebar .logout-btn>span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .sidebar:hover .logout-btn>span,
+  .sidebar:focus-within .logout-btn>span {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 0;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+  }
+}
+
+/* On devices without hover, retain the touch-friendly navigation drawer. */
+@media (min-width: 921px) and (hover: none) {
+
+  .app-frame,
+  .app-frame.ai-layout,
+  .app-frame.ai-layout.ai-closed {
+    grid-template-columns: 90px minmax(0, 1fr);
+  }
+
+  .sidebar {
+    width: 90px;
+    min-width: 90px;
+  }
+}
+
+
+/* ==========================================================================
+   Batch 2 — FX Replay-inspired global visual system
+   Near-black canvas, charcoal surfaces, fine neutral borders and restrained
+   RunPlan blue accents. Existing light-theme tokens remain intact.
+   ========================================================================== */
+
+:root:not([data-theme]),
+[data-theme="dark"] {
+  --bg-canvas: #050607;
+  --bg-hero: #090b0e;
+  --bg-sidebar: #050505;
+  --bg-surface: #111418;
+  --bg-elevated: #181c22;
+  --bg-input: #0b0e12;
+  --bg-hover: rgba(255, 255, 255, 0.055);
+  --bg-active: rgba(74, 137, 244, 0.16);
+
+  --border: #282d34;
+  --border-strong: #3a414b;
+  --border-accent: rgba(83, 145, 255, 0.52);
+
+  --text: #e8ebf0;
+  --text-secondary: #a7afbb;
+  --text-muted: #77818f;
+
+  --accent: #3978e8;
+  --accent-hover: #2f69d1;
+  --accent-bright: #78aaff;
+  --accent-fg: #ffffff;
+  --link: #83b2ff;
+
+  --glow-hero: none;
+  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.28);
+
+  --focus-ring: 0 0 0 3px rgba(91, 148, 244, 0.28);
+  --glow-accent: 0 0 0 1px var(--border-accent), 0 5px 16px -8px rgba(72, 132, 235, 0.38);
+  --glow-soft: 0 0 0 1px var(--border-strong), 0 8px 22px -12px rgba(72, 132, 235, 0.28);
+}
+
+/* The animated LiveBackground component remains mounted in Layout.jsx.
+   Its network colors will be customized in LiveBackground.jsx itself. */
+html,
+body {
+  background: var(--bg-canvas);
+}
+
+body {
+  isolation: auto;
+  position: static;
+}
+
+body::before,
+body::after {
+  content: none !important;
+  display: none !important;
+  animation: none !important;
+}
+
+.app-frame,
+.workspace,
+.workspace-content,
+.shell,
+#main-content {
+  background: transparent;
+  background-image: none;
+}
+
+.app-frame {
+  color: var(--text);
+}
+
+/* FX Replay-style chrome: near-black header and navigation surfaces. */
+.sidebar,
+.workspace-header {
+  background: var(--bg-sidebar);
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+.workspace-header {
+  background: var(--bg-canvas);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.sidebar {
+  box-shadow: none;
+}
+
+.sidebar:hover,
+.sidebar:focus-within {
+  background: var(--bg-sidebar);
+  border-right-color: var(--border-strong);
+  box-shadow: 12px 0 30px rgba(0, 0, 0, 0.42);
+}
+
+/* Shared cards and panels use flat charcoal surfaces rather than blue gradients. */
+.plan-card,
+.panel,
+.kpi-card,
+.page-context-card,
+.weather-panel,
+.weather-day,
+.metric-card,
+.chart-card,
+.support-detail-card,
+.support-runner-card,
+.rp-ai-panel,
+.dialog,
+.modal,
+.confirm-dialog,
+.table-wrap {
+  background-color: var(--bg-surface);
+  background-image: none;
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+.plan-card:hover,
+.panel:hover,
+.kpi-card:hover,
+.page-context-card:hover {
+  background-color: var(--bg-surface);
+  border-color: var(--border-strong);
+  box-shadow: none;
+  transform: none;
+}
+
+/* Weather retains its semantic warning/rain accents, but not tinted gradients. */
+.weather-day,
+.weather-day.is-caution,
+.weather-day.is-warn,
+.weather-day.wx-rain,
+.weather-day.wx-storm,
+.weather-day.wx-sun,
+.weather-day.wx-cloud {
+  background: var(--bg-surface);
+  box-shadow: none;
+}
+
+/* Inputs, selects and textareas: consistent dark controls with clear borders. */
+input,
+select,
+textarea,
+.form input,
+.form select,
+.form textarea,
+.filter-bar input,
+.inline-reschedule input,
+.support-form input,
+.support-form select,
+.support-form textarea,
+.support-report-controls select,
+.support-admin-note-form textarea {
+  color: var(--text);
+  background-color: var(--bg-input);
+  border-color: var(--border-strong);
+  box-shadow: none;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #737d8b;
+  opacity: 1;
+}
+
+input:hover:not(:disabled),
+select:hover:not(:disabled),
+textarea:hover:not(:disabled) {
+  border-color: #596372;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent-bright);
+  outline-color: var(--accent-bright);
+}
+
+/* Secondary and neutral controls adapt to the active theme.
+   Primary and danger actions keep their semantic colors. */
+:root:not([data-theme]),
+[data-theme="dark"] {
+  --btn-neutral-bg: #171b20;
+  --btn-neutral-text: #e8ebf0;
+  --btn-neutral-border: #343a43;
+  --btn-neutral-hover-bg: #20252c;
+  --btn-neutral-hover-text: #ffffff;
+  --btn-neutral-hover-border: #505966;
+}
+
+[data-theme="light"] {
+  --btn-neutral-bg: #f0f3f8;
+  --btn-neutral-text: #172033;
+  --btn-neutral-border: #cbd5e1;
+  --btn-neutral-hover-bg: #e3eaf3;
+  --btn-neutral-hover-text: #111827;
+  --btn-neutral-hover-border: #aebccc;
+}
+
+.btn-secondary,
+.form .btn-secondary,
+a.btn-secondary,
+a.btn-secondary:visited,
+.cal-btn,
+.theme-btn,
+.logout-btn,
+.rp-ai-toggle,
+.rp-ai-close,
+.workspace-header button:not(.btn-primary):not(.btn-danger) {
+  color: var(--btn-neutral-text);
+  background: var(--btn-neutral-bg);
+  border-color: var(--btn-neutral-border);
+  box-shadow: none;
+}
+
+.btn-secondary:hover,
+.form .btn-secondary:hover,
+a.btn-secondary:hover,
+.cal-btn:hover,
+.theme-btn:hover,
+.logout-btn:hover,
+.rp-ai-toggle:hover,
+.rp-ai-close:hover,
+.workspace-header button:not(.btn-primary):not(.btn-danger):hover {
+  color: var(--btn-neutral-hover-text);
+  background: var(--btn-neutral-hover-bg);
+  border-color: var(--btn-neutral-hover-border);
+  box-shadow: none;
+  transform: none;
+}
+
+.btn-primary,
+a.btn-primary,
+a.btn-primary:visited,
+.form .btn-primary {
+  color: #ffffff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.btn-primary:hover,
+a.btn-primary:hover,
+.form .btn-primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+/* Tables use the same flat, low-contrast separators as the reference. */
+.table-wrap,
+.table-wrap table {
+  background: transparent;
+}
+
+.table-wrap thead th {
+  color: #8e98a6;
+  background: #15191e;
+  border-color: var(--border);
+}
+
+.table-wrap th,
+.table-wrap td {
+  border-color: #252a31;
+}
+
+.table-wrap tbody tr:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+/* Avoid decorative blue glow on general content headings and page surfaces. */
+.auth-hero {
+  background-color: var(--bg-canvas);
+  background-image: none;
+}
+
+.workspace-content .shell {
+  background: transparent;
+  background-image: none;
+}
+
+/* Preserve status colors and weather meanings while flattening only decoration. */
+.toast-success,
+.toast-warning,
+.toast-error,
+.toast-info {
+  box-shadow: none;
+}
+
+/* Respect reduced-motion preferences for the remaining interface transitions. */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+
+/* Button contrast safety net: primary actions always use white text on blue. */
+.btn-primary,
+.btn-primary:visited,
+a.btn-primary,
+a.btn-primary:visited,
+.form .btn-primary {
+  color: #ffffff;
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.cal-btn:disabled,
+.theme-btn:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
+/* --------------------------------------------------------------------------
+   Training Plan page refinement
+   Scoped to the Plan page so shared cards, tables and buttons stay unchanged.
+   -------------------------------------------------------------------------- */
+
+.plan-active-card,
+.plan-draft-card,
+.plan-proposal-card {
+  display: grid;
+  gap: 18px;
+}
+
+.plan-active-card>.panel-head,
+.plan-draft-card>.panel-head,
+.plan-proposal-card>.panel-head {
+  margin-bottom: 0;
+  align-items: center;
+}
+
+.plan-actions {
+  margin-top: -2px;
+  margin-bottom: 0;
+  gap: 10px;
+}
+
+.plan-actions .btn {
+  min-height: 42px;
+}
+
+.plan-overview {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background:
+    radial-gradient(ellipse at 8% 0%, rgba(91, 137, 224, 0.12), transparent 52%),
+    var(--bg-elevated);
+}
+
+.plan-overview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.plan-overview-copy {
+  min-width: 0;
+}
+
+.plan-overview-kicker {
+  display: inline-block;
+  margin-bottom: 6px;
+  color: var(--accent-bright);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.plan-overview-copy h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: clamp(18px, 2vw, 23px);
+  font-weight: 750;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+}
+
+.plan-overview-copy p {
+  margin: 7px 0 0;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+}
+
+.plan-overview-total {
+  flex: 0 0 auto;
+  min-width: 150px;
+  padding: 10px 14px;
+  border: 1px solid var(--border-accent);
+  border-radius: 10px;
+  background: var(--bg-active);
+  text-align: right;
+}
+
+.plan-overview-total span {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.plan-overview-total strong {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 25px;
+  font-weight: 750;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.plan-overview-total small {
+  margin-left: 5px;
+  color: var(--accent-bright);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.plan-stats {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.plan-stats>div {
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg-surface);
+}
+
+.plan-stats dt {
+  font-size: 10px;
+  letter-spacing: 0.045em;
+}
+
+.plan-stats dd {
+  margin-top: 5px;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.plan-weeks {
+  margin-top: 0;
+}
+
+.plan-weeks summary {
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 46px;
+}
+
+.plan-weeks summary::before {
+  flex: 0 0 auto;
+}
+
+.plan-weeks-count {
+  margin-left: auto;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.plan-weeks .table-wrap table {
+  min-width: 560px;
+}
+
+.plan-weeks .table-wrap th,
+.plan-weeks .table-wrap td {
+  padding: 11px 14px;
+}
+
+.plan-weeks .table-wrap tbody tr {
+  transition: background-color 140ms ease;
+}
+
+.plan-weeks .table-wrap tbody tr:hover {
+  background: var(--bg-hover);
+}
+
+.plan-weeks .table-wrap tbody th[scope="row"] {
+  color: var(--accent-bright);
+  font-weight: 700;
+}
+
+.plan-weeks .table-wrap tbody td:nth-child(4),
+.plan-weeks .table-wrap tbody td:nth-child(5) {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 760px) {
+  .plan-overview {
+    padding: 14px;
+  }
+
+  .plan-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .plan-actions {
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .plan-overview-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .plan-overview-total {
+    width: 100%;
+    text-align: left;
+  }
+
+  .plan-stats {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .plan-stats>div {
+    padding: 10px;
+  }
+
+  .plan-stats dd {
+    font-size: 13px;
+  }
+
+  .plan-weeks summary {
+    align-items: flex-start;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Dashboard refinement
+   Scoped to the dashboard so shared components on other pages are unchanged.
+   -------------------------------------------------------------------------- */
+.dashboard-page {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0;
+}
+
+.dashboard-page>h1 {
+  margin-bottom: 18px;
+}
+
+.dashboard-page .advisory-banner {
+  margin-bottom: 16px;
+  line-height: 1.55;
+}
+
+.dashboard-page .status-strip {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+  padding: 15px 18px;
+  margin-bottom: 20px;
+}
+
+.dashboard-page .strip-item {
+  min-width: 0;
+  align-content: center;
+  gap: 6px;
+}
+
+.dashboard-page .strip-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-page .section-eyebrow {
+  margin-bottom: 11px;
+}
+
+.dashboard-page .kpi-grid {
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.dashboard-page .kpi-card {
+  min-width: 0;
+  min-height: 132px;
+  padding: 17px 18px;
+  gap: 11px;
+  border-radius: 13px;
+}
+
+.dashboard-page .kpi-num {
+  font-size: clamp(27px, 2.2vw, 34px);
+}
+
+.dashboard-page .kpi-trend {
+  line-height: 1.45;
+}
+
+.dashboard-page>.note {
+  margin-bottom: 18px;
+  line-height: 1.5;
+}
+
+.dashboard-page .dash-grid-main,
+.dashboard-page .dash-grid-two {
+  gap: 16px;
+}
+
+.dashboard-page .dash-grid-main>.plan-card,
+.dashboard-page .dash-grid-two>.plan-card {
+  min-width: 0;
+  border-radius: 13px;
+  padding: 20px;
+}
+
+.dashboard-page .dash-grid-main>.plan-card:first-child {
+  min-height: 310px;
+}
+
+.dashboard-page .chart-svg {
+  height: 210px;
+  overflow: visible;
+}
+
+.dashboard-page .dash-grid-main>.plan-card[aria-labelledby="next-title"] {
+  border-color: var(--border-strong);
+  background: linear-gradient(155deg, var(--bg-surface), var(--bg-elevated));
+}
+
+.dashboard-page .dash-grid-main>.plan-card[aria-labelledby="next-title"] .stats {
+  margin-top: 16px;
+  margin-bottom: 18px;
+}
+
+.dashboard-page .dash-grid-main>.plan-card[aria-labelledby="next-title"] .btn-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.dashboard-page .dash-grid-main>.plan-card[aria-labelledby="next-title"] .btn-row .btn:first-child {
+  grid-column: 1 / -1;
+}
+
+.dashboard-page .runs .card {
+  display: grid;
+  grid-template-columns: minmax(100px, 1.1fr) repeat(3, minmax(0, 1fr)) auto;
+  align-items: center;
+  gap: 8px 12px;
+  min-width: 0;
+}
+
+.dashboard-page .runs .card>* {
+  min-width: 0;
+}
+
+.dashboard-page .runs .card strong,
+.dashboard-page .runs .card span:not(.pill) {
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-page .dash-grid-two>.plan-card[aria-labelledby="progress-title"] p {
+  line-height: 1.6;
+}
+
+.dashboard-page .weather-panel {
+  margin-bottom: 18px;
+  border-radius: 13px;
+}
+
+@media (max-width: 1100px) {
+  .dashboard-page .status-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .dashboard-page .runs .card {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .dashboard-page .status-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    padding: 14px;
+  }
+
+  .dashboard-page .dash-grid-main>.plan-card,
+  .dashboard-page .dash-grid-two>.plan-card {
+    padding: 16px;
+  }
+
+  .dashboard-page .dash-grid-main>.plan-card[aria-labelledby="next-title"] .btn-row {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-page .dash-grid-main>.plan-card[aria-labelledby="next-title"] .btn-row .btn:first-child {
+    grid-column: auto;
+  }
+
+  .dashboard-page .runs .card {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 420px) {
+  .dashboard-page .status-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .dashboard-page .kpi-card {
+    padding: 15px;
+  }
+
+  .dashboard-page .kpi-top {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}
+
+
+/* ==========================================================================
+   Report a Problem — centered, focused support form
+   Scoped to this page so other support forms and cards remain unchanged.
+   ========================================================================== */
+
+.support-page {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: clamp(8px, 1.2vw, 18px) 0 40px;
+}
+
+.support-page .support-page-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 0 auto 24px;
+}
+
+.support-page .support-page-heading>div {
+  min-width: 0;
+}
+
+.support-page .support-page-heading h1 {
+  margin-bottom: 8px;
+}
+
+.support-page .support-page-heading .note {
+  max-width: 680px;
+  margin-bottom: 0;
+}
+
+.support-page .support-page-heading>a {
+  flex: none;
+  margin-bottom: 4px;
+}
+
+.support-page .support-form-card {
+  width: min(100%, 780px);
+  margin: 0 auto 24px;
+  padding: clamp(20px, 3vw, 30px);
+}
+
+.support-page .support-form {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+.support-page .support-form>label {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.support-page .support-form input,
+.support-page .support-form select {
+  min-height: 44px;
+}
+
+.support-page .support-form textarea {
+  min-height: 170px;
+  resize: vertical;
+}
+
+.support-page .support-form label>small {
+  justify-self: end;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.support-page .support-form-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.support-page .support-form-actions .btn {
+  min-width: 140px;
+}
+
+@media (max-width: 640px) {
+  .support-page {
+    padding-top: 8px;
+  }
+
+  .support-page .support-page-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .support-page .support-page-heading>a {
+    margin-bottom: 0;
+  }
+
+  .support-page .support-form-card {
+    padding: 18px 16px;
+  }
+
+  .support-page .support-form-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .support-page .support-form-actions .btn {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 380px) {
+  .support-page .support-form-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Live background stacking fix — append to the end of ui.css */
+.app-frame {
+  position: relative;
+  isolation: isolate;
+  background: transparent;
+}
+
+
+/* ==========================================================================
+   Mobile dashboard layout correction
+   Keep the desktop dashboard unchanged while preventing narrow-screen
+   flex/grid children and header actions from exceeding the viewport.
+   ========================================================================== */
+
+@media (max-width: 920px) {
+
+  .app-frame,
+  .app-frame.ai-layout,
+  .app-frame.ai-layout.ai-closed,
+  .workspace,
+  .workspace-content,
+  .workspace-content .shell,
+  #main-content {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .app-frame.ai-layout,
+  .app-frame.ai-layout.ai-closed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .workspace-header {
+    width: 100%;
+    min-width: 0;
+    padding-left: max(12px, var(--safe-left));
+    padding-right: max(12px, var(--safe-right));
+    gap: 8px;
+  }
+
+  .rp-header-left {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 8px;
+  }
+
+  .workspace-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rp-header-actions {
+    flex: 0 0 auto;
+    min-width: 0;
+    gap: 6px;
+  }
+
+  .workspace-content {
+    padding-left: max(12px, var(--safe-left));
+    padding-right: max(12px, var(--safe-right));
+  }
+
+  .workspace-content .shell {
+    box-sizing: border-box;
+  }
+
+  .dashboard-page,
+  .dashboard-page>* {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .dashboard-page .advisory-banner {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+
+  .dashboard-page .status-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-page .kpi-grid,
+  .dashboard-page .dash-grid-main,
+  .dashboard-page .dash-grid-two {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-page .kpi-card,
+  .dashboard-page .plan-card,
+  .dashboard-page .weather-panel {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .dashboard-page .panel-head {
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  .dashboard-page .panel-head>* {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .dashboard-page .chart-svg {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .dashboard-page .runs .card {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-page .runs .card>* {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 540px) {
+  .workspace-header {
+    padding-left: max(10px, var(--safe-left));
+    padding-right: max(10px, var(--safe-right));
+  }
+
+  .workspace-content {
+    padding-left: max(12px, var(--safe-left));
+    padding-right: max(12px, var(--safe-right));
+  }
+
+  .dashboard-page>h1 {
+    font-size: clamp(23px, 6vw, 29px);
+    line-height: 1.2;
+  }
+
+  .dashboard-page .status-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 13px;
+  }
+
+  .dashboard-page .strip-item,
+  .dashboard-page .strip-value {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .dashboard-page .kpi-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-page .kpi-card {
+    min-height: 116px;
+    padding: 15px;
+  }
+
+  .dashboard-page .kpi-top {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+
+  .dashboard-page .dash-grid-main>.plan-card,
+  .dashboard-page .dash-grid-two>.plan-card {
+    padding: 15px;
+  }
+
+  .dashboard-page .dash-grid-main>.plan-card:first-child {
+    min-height: 0;
+  }
+
+  .dashboard-page .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 11px;
+  }
+
+  .dashboard-page .stats>div {
+    min-width: 0;
+  }
+
+  .dashboard-page .stats dd {
+    overflow-wrap: anywhere;
+    font-size: 13px;
+  }
+
+  .dashboard-page .dash-grid-main>.plan-card[aria-labelledby="next-title"] .btn-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-page .dash-grid-main>.plan-card[aria-labelledby="next-title"] .btn-row .btn:first-child {
+    grid-column: auto;
+  }
+
+  .dashboard-page .weather-strip {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 380px) {
+
+  .dashboard-page .status-strip,
+  .dashboard-page .stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-page .runs .card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rp-header-actions {
+    gap: 4px;
+  }
+}

@@ -16,11 +16,11 @@ const DAYS = [
   ['mon', 'Mon'], ['tue', 'Tue'], ['wed', 'Wed'], ['thu', 'Thu'],
   ['fri', 'Fri'], ['sat', 'Sat'], ['sun', 'Sun'],
 ]
-const TIMES = [
-  ['morning', 'Morning (6:30 AM)'],
-  ['afternoon', 'Afternoon (2:00 PM)'],
-  ['evening', 'Evening (6:30 PM)'],
-]
+const LEGACY_PREFERRED_TIMES = {
+  morning: '06:30',
+  afternoon: '14:00',
+  evening: '18:30',
+}
 const SESSION_COUNTS = [2, 3, 4, 5, 6]
 
 const empty = {
@@ -30,7 +30,7 @@ const empty = {
   target_race_date: '',
   available_days: [],
   desired_sessions_per_week: '',
-  preferred_time: 'morning',
+  preferred_time: '06:30',
   baseline_distance_km: '',
   baseline_pace: '',
   location_label: '',
@@ -43,9 +43,7 @@ const NATIVE_REMINDERS_KEY = 'runplan.native-run-reminders.v1'
 const RUNPLAN_NOTIFICATION_ID_BASE = 1_000_000_000
 const RUNPLAN_NOTIFICATION_ID_LIMIT = 2_000_000_000
 const PREFERRED_START_TIMES = {
-  morning: '06:30',
-  afternoon: '14:00',
-  evening: '18:30',
+  ...LEGACY_PREFERRED_TIMES,
 }
 
 const numToText = (value) => (value === null || value === undefined ? '' : String(value))
@@ -56,6 +54,12 @@ function applicationServerKey(value) {
   const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')
   const raw = atob(padded)
   return Uint8Array.from(raw, (char) => char.charCodeAt(0))
+}
+
+function normalizePreferredTime(value) {
+  const time = String(value ?? '')
+  if (LEGACY_PREFERRED_TIMES[time]) return LEGACY_PREFERRED_TIMES[time]
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(time) ? time : '06:30'
 }
 
 function fromApi(p) {
@@ -69,8 +73,8 @@ function fromApi(p) {
       p.desired_sessions_per_week === null || p.desired_sessions_per_week === undefined
         ? ''
         : String(p.desired_sessions_per_week),
-    // Older profiles without a saved training time use the default.
-    preferred_time: p.preferred_time || 'morning',
+    // Convert older preset values while keeping custom HH:MM times.
+    preferred_time: normalizePreferredTime(p.preferred_time),
     baseline_distance_km: p.baseline_distance_km === null ? '' : String(p.baseline_distance_km),
     baseline_pace: p.baseline_pace_label ?? '',
     location_label: p.location?.label ?? '',
@@ -105,7 +109,7 @@ function notificationIdForSession(sessionId) {
 
 function getRunTimes(session, preferredTime, leadMinutes) {
   const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(session.scheduled_date ?? ''))
-  const startTime = session.planned_start_time || PREFERRED_START_TIMES[preferredTime]
+  const startTime = session.planned_start_time || PREFERRED_START_TIMES[preferredTime] || preferredTime || '06:30'
   const timeMatch = /^(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(String(startTime ?? ''))
 
   if (!dateMatch || !timeMatch) return null
@@ -228,7 +232,7 @@ async function scheduleNativeRunReminders(sessions, leadMinutes, preferredTime, 
 
 export default function Profile() {
   const [form, setForm] = useState(empty)
-  const [savedPreferredTime, setSavedPreferredTime] = useState('morning')
+  const [savedPreferredTime, setSavedPreferredTime] = useState('06:30')
   const [state, setState] = useState('loading')
   const [errors, setErrors] = useState({})
   const [formError, setFormError] = useState('')
@@ -342,8 +346,8 @@ export default function Profile() {
     setFormError('')
     setSaved(false)
 
-    if (!TIMES.some(([value]) => value === form.preferred_time)) {
-      setErrors({ preferred_time: 'Choose your usual training time.' })
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(form.preferred_time)) {
+      setErrors({ preferred_time: 'Choose a valid training time.' })
       return
     }
 
@@ -562,17 +566,16 @@ export default function Profile() {
     <Field
       id="pf-time"
       label="Usual training time"
-      hint="RunPlan uses this as the default workout time. You can still adjust individual workouts."
+      hint="Choose your preferred workout start time. You can still adjust individual workouts."
       error={errors.preferred_time}
     >
-      <select
+      <input
         {...attrs('pf-time', 'preferred_time', true)}
+        type="time"
         value={form.preferred_time}
         onChange={set('preferred_time')}
         required
-      >
-        {TIMES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-      </select>
+      />
     </Field>
   )
 

@@ -191,7 +191,7 @@ export default function Register() {
   }
 
   return (
-    <div className="auth-split">
+    <div className="auth-split" style={{ isolation: 'isolate' }}>
       <LiveBackground />
       <section className="auth-hero" aria-label="About RunPlan AI">
         <div>

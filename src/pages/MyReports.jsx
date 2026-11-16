@@ -31,7 +31,13 @@ export default function MyReports() {
           <h1>My Reports</h1>
           <p className="note">Only you and RunPlan administrators can view your submitted reports.</p>
         </div>
-        <Link className="btn" to="/support/report">Report a problem</Link>
+        <Link
+          className="btn btn-primary"
+          to="/support/report"
+          style={{ color: "#ffffff", fontWeight: 700 }}
+        >
+          Report a problem
+        </Link>
       </div>
 
       {state === 'loading' && <PageLoading label="Loading your reports…" rows={2} />}
@@ -40,7 +46,13 @@ export default function MyReports() {
       {state === 'ready' && reports.length === 0 && (
         <section className="plan-card">
           <p>You have not submitted a report yet.</p>
-          <Link to="/support/report">Report a problem</Link>
+          <Link
+            className="btn btn-primary"
+            to="/support/report"
+            style={{ color: "#ffffff", fontWeight: 700 }}
+          >
+            Report a problem
+          </Link>
         </section>
       )}
 

@@ -588,6 +588,7 @@ const location = useLocation()
     distance_km: distanceRef.current.toFixed(3),
     duration_seconds: Math.max(1, Math.floor(elapsedRef.current)),
     effort: null,
+    workout_type: linkedSession?.type ?? manualWorkout?.workoutType ?? null,
     notes: manualWorkout?.notes
         ? `${manualWorkout.notes}\nRecorded with the RunPlan GPS tracker.`
         : 'Recorded with the RunPlan GPS tracker.',

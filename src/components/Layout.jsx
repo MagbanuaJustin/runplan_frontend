@@ -9,7 +9,6 @@ import {
 } from '../profileAvatar.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import LiveBackground from './LiveBackground.jsx'
-import PageContext from './PageContext.jsx'
 import { PageLoadingContext } from './PageLoading.jsx'
 
 const isNativeApp = Capacitor.isNativePlatform()
@@ -17,7 +16,6 @@ const MOBILE_NAV_QUERY = '(max-width: 920px)'
 
 const AI_MIN_WIDTH = 300
 const AI_MAX_WIDTH = 560
-const AI_DESKTOP_QUERY = '(min-width: 921px)'
 const AI_MOBILE_QUERY = '(max-width: 920px)'
 
 const AI_SUGGESTIONS = [
@@ -271,6 +269,25 @@ const NAV_GROUPS = [
           </svg>
         ),
       },
+
+            {
+        to: '/performance-metrics',
+        label: 'Performance Metrics',
+        icon: (
+          <svg
+            className="nav-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M3 3v18h18" />
+            <path d="m7 14 4-4 4 3 6-7" />
+          </svg>
+        ),
+      },
     ],
   },
   {
@@ -461,6 +478,7 @@ const NAV_GROUPS = [
 
 const PAGE_TITLES = {
   '/dashboard': 'Dashboard',
+  '/performance-metrics': 'Performance Metrics',
   '/calendar': 'Training Calendar',
   '/run': 'Start a Run',
   '/activities': 'Log a Past Run',
@@ -582,6 +600,8 @@ function AdminNavigation({ onNavigate }) {
       <NavLink
         to="/status"
         className="nav-link"
+        title="System Status"
+        aria-label="System Status"
         onClick={onNavigate}
       >
         <svg
@@ -604,6 +624,8 @@ function AdminNavigation({ onNavigate }) {
       <NavLink
         to="/support"
         className="nav-link"
+        title="Support Console"
+        aria-label="Support Console"
         onClick={onNavigate}
       >
         <svg
@@ -645,9 +667,7 @@ export default function Layout() {
   )
   const [profileAvatar, setProfileAvatar] = useState(() => readProfileAvatar(user))
 
-  const [aiOpen, setAiOpen] = useState(() =>
-    typeof window !== 'undefined' && window.matchMedia(AI_DESKTOP_QUERY).matches
-  )
+  const [aiOpen, setAiOpen] = useState(false)
   const [aiWidth, setAiWidth] = useState(() => {
     const saved = Number(localStorage.getItem('rp_ai_width'))
     return Number.isFinite(saved) && saved >= AI_MIN_WIDTH && saved <= AI_MAX_WIDTH
@@ -737,7 +757,9 @@ export default function Layout() {
 
   useEffect(() => {
     const media = window.matchMedia(AI_MOBILE_QUERY)
-    const handleChange = (event) => setAiOpen(!event.matches)
+    const handleChange = (event) => {
+      if (event.matches) setAiOpen(false)
+    }
 
     if (media.addEventListener) {
       media.addEventListener('change', handleChange)
@@ -901,6 +923,8 @@ export default function Layout() {
                   key={item.to}
                   to={item.to}
                   className="nav-link"
+                  title={item.label}
+                  aria-label={item.label}
                   onClick={() => setMenuOpen(false)}
                 >
                   {item.icon}
@@ -1022,15 +1046,6 @@ export default function Layout() {
             </PageLoadingContext.Provider>
           </main>
 
-          {loadingCount === 0 && (
-            <aside
-              className="page-context-column page-context-right"
-              aria-label="Page guidance and related actions"
-            >
-              <PageContext pathname={location.pathname} side="left" />
-              <PageContext pathname={location.pathname} side="right" />
-            </aside>
-          )}
         </div>
       </div>
 

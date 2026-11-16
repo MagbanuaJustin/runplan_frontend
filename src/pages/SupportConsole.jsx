@@ -21,48 +21,6 @@ function timestamp(value) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
 }
 
-function displayValue(value) {
-  if (value === null || value === undefined || value === '') return '—'
-  if (Array.isArray(value)) return value.length ? value.join(', ') : '—'
-  if (typeof value === 'object') return JSON.stringify(value)
-  return String(value)
-}
-
-function RunnerPasswordForm({ saving, onSave }) {
-  const [password, setPassword] = useState('')
-  const [confirm, setConfirm] = useState('')
-  const [message, setMessage] = useState('')
-
-  async function submit(event) {
-    event.preventDefault()
-    setMessage('')
-    if (password !== confirm) {
-      setMessage('The passwords do not match.')
-      return
-    }
-    try {
-      await onSave(password, confirm)
-      setPassword('')
-      setConfirm('')
-      setMessage('Password changed. The runner has been signed out of other sessions.')
-    } catch (err) {
-      setMessage(err.message || 'Could not change the password.')
-    }
-  }
-
-  return <form className="support-runner-password" onSubmit={submit}>
-    <label>New temporary password
-      <input type="password" autoComplete="new-password" minLength={8} maxLength={72} value={password} onChange={(e) => setPassword(e.target.value)} required />
-    </label>
-    <label>Confirm password
-      <input type="password" autoComplete="new-password" minLength={8} maxLength={72} value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
-    </label>
-    <button className="btn" disabled={saving}>{saving ? 'Saving…' : 'Set password'}</button>
-    {message && <p className={message.startsWith('Password changed') ? 'success' : 'error'} role="status">{message}</p>}
-    <small>Give the temporary password to the runner privately and ask them to change it after signing in.</small>
-  </form>
-}
-
 export default function SupportConsole() {
   const [tab, setTab] = useState('Reports')
   const [consoleData, setConsoleData] = useState(null)
@@ -70,9 +28,6 @@ export default function SupportConsole() {
   const [state, setState] = useState('loading')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(null)
-  const [selectedRunnerId, setSelectedRunnerId] = useState(null)
-  const [runnerDetails, setRunnerDetails] = useState(null)
-  const [runnerLoading, setRunnerLoading] = useState(false)
   const [backupRows, setBackupRows] = useState([])
   const [backupLoading, setBackupLoading] = useState(false)
   const [backupMessage, setBackupMessage] = useState('')
@@ -124,51 +79,6 @@ export default function SupportConsole() {
     }
   }
 
-  async function openRunner(id) {
-    setSelectedRunnerId(id)
-    setRunnerDetails(null)
-    setRunnerLoading(true)
-    setError('')
-    try {
-      const result = await apiGet(`/support/users/${id}`)
-      setRunnerDetails(result.data)
-    } catch (err) {
-      setError(err.message || 'Could not load runner details.')
-    } finally {
-      setRunnerLoading(false)
-    }
-  }
-
-  async function changeRunnerStatus(user) {
-    const nextStatus = user.status === 'active' ? 'suspended' : 'active'
-    const action = nextStatus === 'suspended' ? 'suspend' : 'reactivate'
-    if (!window.confirm(`Are you sure you want to ${action} ${user.email}?`)) return
-
-    setSaving(`user-${user.id}`)
-    setError('')
-    try {
-      await apiPatch(`/support/users/${user.id}/status`, { status: nextStatus })
-      await load()
-      await openRunner(user.id)
-    } catch (err) {
-      setError(err.message || `Could not ${action} the account.`)
-    } finally {
-      setSaving(null)
-    }
-  }
-
-  async function setRunnerPassword(id, password, confirmation) {
-    setSaving(`password-${id}`)
-    try {
-      await apiPatch(`/support/users/${id}/password`, {
-        new_password: password,
-        confirmation,
-      })
-    } finally {
-      setSaving(null)
-    }
-  }
-
   async function createBackup() {
     setSaving('backup')
     setBackupMessage('')
@@ -211,7 +121,6 @@ export default function SupportConsole() {
 
   const { totals, system, users, activity, data_safety: safety } = consoleData
   const providerEntries = Object.entries(system?.providers ?? {})
-  const selectedUser = users.find((user) => Number(user.id) === Number(selectedRunnerId))
 
   return <>
     <div className="support-page-heading">
@@ -263,64 +172,10 @@ export default function SupportConsole() {
           <td>{user.email}</td><td>{user.role === 'admin' ? 'Administrator' : 'Runner'}</td>
           <td><span className={`pill ${user.status === 'active' ? 'pill-ok' : 'pill-warn'}`}>{user.status}</span></td>
           <td>{timestamp(user.created_at)}</td>
-          <td>{user.role === 'runner' ? <button className="btn btn-secondary" type="button" onClick={() => openRunner(user.id)}>{Number(selectedRunnerId) === Number(user.id) ? 'Refresh details' : 'View details'}</button> : <span className="note">Admin</span>}</td>
+          <td>{user.role === 'runner' ? <Link className="btn btn-secondary" to={`/support/users/${user.id}`}>View details</Link> : <span className="note">Admin</span>}</td>
         </tr>)}
       </tbody></table></div>
 
-      {selectedRunnerId && <section className="support-runner-details" aria-label="Runner details">
-        <div className="panel-head">
-          <div><h2>{runnerDetails?.user?.email ?? 'Runner details'}</h2><span>Profile, training, runs, reports, and connected service status</span></div>
-          <button className="btn btn-secondary" type="button" onClick={() => { setSelectedRunnerId(null); setRunnerDetails(null) }}>Close</button>
-        </div>
-        {runnerLoading && <p role="status">Loading runner data…</p>}
-        {runnerDetails && selectedUser && <>
-          <div className="support-detail-grid">
-            <article><h3>Account</h3><dl>
-              <dt>Email</dt><dd>{runnerDetails.user.email}</dd>
-              <dt>Status</dt><dd>{runnerDetails.user.status}</dd>
-              <dt>Joined</dt><dd>{timestamp(runnerDetails.user.created_at)}</dd>
-              <dt>Updated</dt><dd>{timestamp(runnerDetails.user.updated_at)}</dd>
-            </dl></article>
-            <article><h3>Runner profile</h3><dl>
-              {Object.entries(runnerDetails.profile ?? {}).filter(([key]) => !['id', 'user_id', 'created_at', 'updated_at'].includes(key)).map(([key, value]) => <div key={key}><dt>{key.replaceAll('_', ' ')}</dt><dd>{displayValue(value)}</dd></div>)}
-              {!runnerDetails.profile && <dd>No profile has been saved.</dd>}
-            </dl></article>
-          </div>
-
-          <article className="support-detail-card"><h3>Training plans and scheduled sessions</h3>
-            {(runnerDetails.plans ?? []).length === 0 ? <p className="note">No training plans.</p> : runnerDetails.plans.map((plan) => <details key={plan.id} className="support-detail-plan" open={plan.status === 'active'}>
-              <summary>Plan #{plan.id} · {plan.goal || 'Training'} · {plan.status} · {plan.sessions.length} sessions</summary>
-              <p>{plan.start_date} to {plan.end_date || '—'} · version {plan.version ?? '—'}</p>
-              {plan.sessions.length > 0 && <div className="table-wrap"><table><thead><tr><th>Date</th><th>Workout</th><th>Distance</th><th>Status</th><th>Start</th><th>Notes</th></tr></thead><tbody>{plan.sessions.map((session) => <tr key={session.id}><td>{session.scheduled_date}</td><td>{session.type}</td><td>{session.planned_distance_km ?? '—'} km</td><td>{session.status}</td><td>{session.planned_start_time || '—'}</td><td>{session.notes || '—'}</td></tr>)}</tbody></table></div>}
-            </details>)}
-          </article>
-
-          <article className="support-detail-card"><h3>Logged runs ({runnerDetails.activities.length})</h3>
-            {runnerDetails.activities.length === 0 ? <p className="note">No logged runs.</p> : <div className="table-wrap"><table><thead><tr><th>Date</th><th>Distance</th><th>Duration</th><th>Effort</th><th>Notes</th></tr></thead><tbody>{runnerDetails.activities.map((run) => <tr key={run.id}><td>{run.activity_date}</td><td>{run.distance_km} km</td><td>{run.duration_seconds}s</td><td>{run.effort ?? '—'}</td><td>{run.notes || '—'}</td></tr>)}</tbody></table></div>}
-          </article>
-
-          <div className="support-detail-grid">
-            <article><h3>Connected services</h3>
-              {runnerDetails.integrations.length === 0 ? <p className="note">No connected services.</p> : <ul>{runnerDetails.integrations.map((item) => <li key={item.provider}>{item.provider} · connected {timestamp(item.connected_at)}{item.scopes ? ` · scopes: ${item.scopes}` : ''}</li>)}</ul>}
-              <small>OAuth credentials and tokens are deliberately hidden.</small>
-            </article>
-            <article><h3>Problem reports ({runnerDetails.reports.length})</h3>
-              {runnerDetails.reports.length === 0 ? <p className="note">No reports.</p> : <ul>{runnerDetails.reports.map((item) => <li key={item.id}><strong>{item.subject}</strong> · {item.status} · {timestamp(item.created_at)}</li>)}</ul>}
-            </article>
-          </div>
-
-          <div className="support-detail-grid support-account-actions">
-            <article><h3>Account access</h3><p>This preserves the runner’s history. Suspending blocks protected API access and signs out refresh sessions.</p>
-              <button className={selectedUser.status === 'active' ? 'btn btn-danger' : 'btn'} disabled={saving === `user-${selectedUser.id}`} onClick={() => changeRunnerStatus(selectedUser)}>
-                {saving === `user-${selectedUser.id}` ? 'Saving…' : selectedUser.status === 'active' ? 'Suspend account' : 'Reactivate account'}
-              </button>
-            </article>
-            <article><h3>Set a new password</h3><p>The new password is not shown again or emailed. Share it with the runner privately.</p>
-              <RunnerPasswordForm saving={saving === `password-${selectedUser.id}`} onSave={(password, confirmation) => setRunnerPassword(selectedUser.id, password, confirmation)} />
-            </article>
-          </div>
-        </>}
-      </section>}
       <p className="note">Admin accounts cannot be managed from this screen. New runner accounts continue to use the existing registration page.</p>
     </section>}
 

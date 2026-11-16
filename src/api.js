@@ -1,4 +1,13 @@
-const API_URL = import.meta.env.VITE_API_URL ?? '/api'
+import { Capacitor } from '@capacitor/core'
+
+// Web builds use the same-origin /api route (Vercel rewrite).
+// Native Android builds call the Render API directly because Vercel rewrites
+// do not apply inside the Capacitor WebView.
+const API_URL =
+  import.meta.env.VITE_API_URL
+  ?? (Capacitor.isNativePlatform()
+    ? 'https://backend-api-runplan.onrender.com/api'
+    : '/api')
 
 let accessToken = null
 let refreshHandler = null

@@ -271,7 +271,7 @@ export default function Dashboard() {
   const isLiveGroq = feedback?.provider_status === 'ok'
 
   return (
-    <>
+    <div className="dashboard-page">
       <h1>Dashboard</h1>
 
       <div className="advisory-banner">
@@ -320,9 +320,6 @@ export default function Dashboard() {
           </span>
         </div>
       </section>
-
-      {/* Phase 4: advisory weather for the next few days (never changes the plan) */}
-      <WeatherPanel />
 
       {/* BioSense-style 4 monospace KPI cards */}
       <p className="section-eyebrow">Last 7 Days Readings</p>
@@ -391,6 +388,9 @@ export default function Dashboard() {
       <p className="note" style={{ marginTop: 0 }}>
         Trends compare your last 7 days against the prior 7-day rolling window using manual RunPlan entries only.
       </p>
+
+      {/* Weather is advisory only; place it after the key training metrics. */}
+      <WeatherPanel />
 
       {/* Middle 2-column row: Interactive 8-week chart + Next Session card */}
       <div className="dash-grid-main">
@@ -572,6 +572,6 @@ export default function Dashboard() {
         error={coachError}
         onRefresh={refreshCoaching}
       />
-    </>
+    </div>
   )
 }

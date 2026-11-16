@@ -43,7 +43,6 @@ export function AuthProvider({ children }) {
             refreshing.current = null
           })
       }
-
       return refreshing.current
     })
   }, [startSession, endSession])
@@ -64,17 +63,17 @@ export function AuthProvider({ children }) {
       .catch(() => setStatus('out'))
   }, [startSession])
 
-  async function login(email, password) {
+  const login = useCallback(async (email, password) => {
     const body = await apiPost('/auth/login', { email, password })
     startSession(body.data)
-  }
+  }, [startSession])
 
-  async function loginWithGoogle(
+  const loginWithGoogle = useCallback(async (
     idToken,
     recaptchaToken,
     termsAccepted = false,
     termsVersion = '',
-  ) {
+  ) => {
     const payload = { credential: idToken }
 
     if (recaptchaToken) payload.recaptcha_token = recaptchaToken
@@ -85,7 +84,7 @@ export function AuthProvider({ children }) {
 
     const body = await apiPost('/auth/google', payload)
     startSession(body.data)
-  }
+  }, [startSession])
 
   async function logout() {
     try {

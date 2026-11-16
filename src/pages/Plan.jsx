@@ -85,22 +85,53 @@ function PlanSummary({ data }) {
   const { plan, sessions } = data
   const weeks = weeklySummary(sessions, plan.start_date)
   const totalKm = sessions.reduce((sum, session) => sum + (session.planned_distance_km ?? 0), 0)
+  const averageWeeklyKm = weeks.length > 0 ? totalKm / weeks.length : 0
 
   return (
     <>
-      <dl className="stats">
-        <div><dt>Goal</dt><dd>{GOALS[plan.goal] ?? plan.goal}</dd></div>
-        <div>
-          <dt>Schedule Window</dt>
-          <dd>{formatDate(plan.start_date)} &ndash; {formatDate(plan.end_date)}</dd>
-        </div>
-        <div><dt>Length</dt><dd>{weeks.length} weeks</dd></div>
-        <div><dt>Runs / Week</dt><dd>{plan.sessions_per_week}</dd></div>
-        <div><dt>Total Volume</dt><dd>{Math.round(totalKm)} km</dd></div>
-      </dl>
+      <section className="plan-overview" aria-label="Training plan overview">
+        <div className="plan-overview-heading">
+          <div className="plan-overview-copy">
+            <span className="plan-overview-kicker">PLAN OVERVIEW</span>
+            <h3>{GOALS[plan.goal] ?? plan.goal} training plan</h3>
+            <p>
+              {formatDate(plan.start_date)} &ndash; {formatDate(plan.end_date)}
+              <span aria-hidden="true"> · </span>
+              {weeks.length} week schedule
+            </p>
+          </div>
 
-      <details className="weeks" open>
-        <summary>Week-by-week breakdown ({weeks.length} weeks)</summary>
+          <div className="plan-overview-total">
+            <span>Total planned distance</span>
+            <strong>{Math.round(totalKm)}<small>km</small></strong>
+          </div>
+        </div>
+
+        <dl className="stats plan-stats">
+          <div>
+            <dt>Plan duration</dt>
+            <dd>{weeks.length} weeks</dd>
+          </div>
+          <div>
+            <dt>Runs per week</dt>
+            <dd>{plan.sessions_per_week}</dd>
+          </div>
+          <div>
+            <dt>Planned workouts</dt>
+            <dd>{sessions.length}</dd>
+          </div>
+          <div>
+            <dt>Average weekly volume</dt>
+            <dd>{averageWeeklyKm.toFixed(1)} km</dd>
+          </div>
+        </dl>
+      </section>
+
+      <details className="weeks plan-weeks" open>
+        <summary>
+          <span>Week-by-week breakdown</span>
+          <span className="plan-weeks-count">{weeks.length} weeks</span>
+        </summary>
         <div className="table-wrap">
           <table>
             <caption className="sr-only">Planned distance for each week</caption>
@@ -407,7 +438,7 @@ export default function Plan() {
       )}
 
       {draft && (
-        <section className="plan-card" aria-labelledby="draft-title">
+        <section className="plan-card plan-draft-card" aria-labelledby="draft-title">
           <div className="panel-head">
             <h2 id="draft-title">
               {draft.plan.creation_mode === 'manual'
@@ -477,7 +508,7 @@ export default function Plan() {
       )}
 
       {pendingRevision && (
-        <section className="plan-card" aria-labelledby="proposal-title">
+        <section className="plan-card plan-proposal-card" aria-labelledby="proposal-title">
           <div className="panel-head">
             <h2 id="proposal-title">Proposed plan revision preview</h2>
             <span className="pill pill-warn">
@@ -532,7 +563,7 @@ export default function Plan() {
       )}
 
       {active && (
-        <section className="plan-card" aria-labelledby="active-title">
+        <section className="plan-card plan-active-card" aria-labelledby="active-title">
           <div className="panel-head">
             <h2 id="active-title">Active training plan</h2>
             <span className="pill pill-ok">
@@ -542,7 +573,7 @@ export default function Plan() {
             </span>
           </div>
 
-          <div className="btn-row" style={{ gap: 12, marginBottom: 18 }}>
+          <div className="btn-row plan-actions">
             <Link className="btn btn-secondary" to="/calendar">Open calendar</Link>
 
             {active.plan.creation_mode !== 'manual' && !pendingRevision && !proposing && (

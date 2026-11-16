@@ -1,3 +1,4 @@
+
 # Logs
 logs
 *.log
@@ -7,10 +8,14 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies and builds
 node_modules
 dist
 dist-ssr
 *.local
+
+# Android build artifacts
+*.apk
 
 # Editor directories and files
 .vscode/*
@@ -22,11 +27,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment files
 .env
 
+# Markdown files
 .md
-<<<<<<< HEAD
-=======
-
-.md
->>>>>>> 306e20a (Update app)

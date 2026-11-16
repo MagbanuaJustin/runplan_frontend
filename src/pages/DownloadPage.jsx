@@ -90,6 +90,7 @@ export default function DownloadPage() {
       <LiveBackground />
       <style>{`
         .dl-page {
+          isolation: isolate;
           max-width: 760px;
           min-height: 100vh;
           display: flex;

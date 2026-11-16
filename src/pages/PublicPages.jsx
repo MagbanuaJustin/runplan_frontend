@@ -513,7 +513,7 @@ export function LandingPage() {
               Create a RunPlan account
             </Link>
             <Link
-              className="public-button"
+              className="public-button public-button-secondary"
               to="/login"
               state={downloadAfterLogin}
             >

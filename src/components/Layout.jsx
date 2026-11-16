@@ -877,7 +877,7 @@ export default function Layout() {
 
   return (
     <div
-      className={`app-frame ai-layout${aiOpen ? ' ai-open' : ' ai-closed'}`}
+      className={`app-frame ai-layout${aiOpen ? ' ai-open' : ' ai-closed'}${location.pathname === '/run' ? ' is-run-layout' : ''}`}
       style={{ '--rp-ai-width': `${aiWidth}px` }}
     >
       <LiveBackground />

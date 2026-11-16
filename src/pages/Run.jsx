@@ -591,17 +591,32 @@ const location = useLocation()
     setError('')
 
     try {
+      const routeSegments = routeSegmentsRef.current
+        .filter((segment) => Array.isArray(segment) && segment.length > 0)
+        .map((segment) =>
+          segment.map((point) => ({
+            latitude: point.latitude,
+            longitude: point.longitude,
+            accuracy: point.accuracy ?? null,
+            timestamp: point.timestamp,
+          })),
+        )
+
       await apiPost('/activities', {
-    activity_date: manualWorkout?.date ?? localDate(),
-    distance_km: distanceRef.current.toFixed(3),
-    duration_seconds: Math.max(1, Math.floor(elapsedRef.current)),
-    effort: null,
-    workout_type: linkedSession?.type ?? manualWorkout?.workoutType ?? null,
-    notes: manualWorkout?.notes
-        ? `${manualWorkout.notes}\nRecorded with the RunPlan GPS tracker.`
-        : 'Recorded with the RunPlan GPS tracker.',
-    ...(linkedSession ? { session_id: linkedSession.id } : {}),
-})
+        activity_date: manualWorkout?.date ?? localDate(),
+        distance_km: distanceRef.current.toFixed(3),
+        duration_seconds: Math.max(1, Math.floor(elapsedRef.current)),
+        effort: null,
+        workout_type: linkedSession?.type ?? manualWorkout?.workoutType ?? null,
+        notes: manualWorkout?.notes
+          ? `${manualWorkout.notes}
+             Recorded with the RunPlan GPS tracker.`
+          : 'Recorded with the RunPlan GPS tracker.',
+        route_data: routeSegments.length > 0
+          ? { segments: routeSegments }
+          : null,
+        ...(linkedSession ? { session_id: linkedSession.id } : {}),
+      })
       setSaved(true)
     } catch (saveError) {
       setError(

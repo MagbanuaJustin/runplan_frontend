@@ -2983,8 +2983,10 @@ a.btn-primary:visited,
   width: 42px;
   height: 42px;
   flex: 0 0 42px;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   border: 1px solid var(--run-border);
   border-radius: 50%;
   background: var(--run-panel);
@@ -2992,6 +2994,20 @@ a.btn-primary:visited,
   text-decoration: none;
   font-size: 28px;
   line-height: 1;
+  box-sizing: border-box;
+}
+
+.run-back-button span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: block;
+  padding: 0;
+  margin: 0;
+  line-height: 1;
+  font-size: 26px;
+  transform: translate(-50%, -54%);
+  text-align: center;
 }
 
 .run-workout-chip {
@@ -3441,4 +3457,112 @@ a.btn-primary:visited,
     right: max(14px, var(--safe-right));
     left: auto;
   }
+}
+
+/* Final refinement: immersive run tracker and reliable light-theme contrast. */
+body.is-run-tracking { overflow: hidden !important; }
+body.is-run-tracking .app-frame.is-run-layout {
+  position: fixed !important; inset: 0 !important; display: block !important;
+  width: 100vw !important; height: 100vh !important; height: 100dvh !important;
+  min-height: 0 !important; overflow: hidden !important; margin: 0 !important; padding: 0 !important;
+}
+body.is-run-tracking .app-frame.is-run-layout > .live-background,
+body.is-run-tracking .app-frame.is-run-layout > .sidebar-backdrop,
+body.is-run-tracking .app-frame.is-run-layout > .sidebar,
+body.is-run-tracking .app-frame.is-run-layout .workspace-header,
+body.is-run-tracking .app-frame.is-run-layout .rp-ai-panel,
+body.is-run-tracking .app-frame.is-run-layout .rp-ai-backdrop { display: none !important; }
+body.is-run-tracking .app-frame.is-run-layout .workspace,
+body.is-run-tracking .app-frame.is-run-layout .workspace-content {
+  position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important;
+  min-width: 0 !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important;
+}
+body.is-run-tracking .app-frame.is-run-layout .shell,
+body.is-run-tracking .app-frame.is-run-layout #main-content {
+  width: 100% !important; max-width: none !important; height: 100% !important; min-height: 0 !important;
+  margin: 0 !important; padding: 0 !important; overflow: hidden !important;
+}
+body.is-run-tracking .run-screen {
+  position: fixed !important; z-index: 1000 !important; inset: 0 !important;
+  width: 100vw !important; height: 100vh !important; height: 100dvh !important;
+  min-height: 0 !important; margin: 0 !important; border: 0 !important; border-radius: 0 !important;
+}
+body.is-run-tracking .run-map-layer { position: absolute !important; inset: 0 !important; }
+
+/* Light theme: readable cards and charts in metrics and support pages. */
+[data-theme="light"] .pmx-page,
+[data-theme="light"] .support-runner-page { color: var(--text); }
+[data-theme="light"] .pmx-page .panel,
+[data-theme="light"] .pmx-page .pmx-panel,
+[data-theme="light"] .pmx-page .pmx-metric-card,
+[data-theme="light"] .support-runner-page .panel,
+[data-theme="light"] .support-runner-page .support-detail-card,
+[data-theme="light"] .support-runner-page .support-runner-identity,
+[data-theme="light"] .support-console-section .panel,
+[data-theme="light"] .support-console-section .plan-card,
+[data-theme="light"] .support-console-metrics .support-metric {
+  color: var(--text) !important; background: var(--bg-surface) !important; background-image: none !important;
+  border-color: var(--border) !important; box-shadow: var(--shadow-card);
+}
+[data-theme="light"] .pmx-page h1,
+[data-theme="light"] .pmx-page h2,
+[data-theme="light"] .pmx-page h3,
+[data-theme="light"] .pmx-page strong,
+[data-theme="light"] .support-runner-page h1,
+[data-theme="light"] .support-runner-page h2,
+[data-theme="light"] .support-runner-page h3,
+[data-theme="light"] .support-runner-page strong,
+[data-theme="light"] .support-console-section h2,
+[data-theme="light"] .support-console-section h3,
+[data-theme="light"] .support-console-section strong { color: var(--text) !important; }
+[data-theme="light"] .pmx-page p,
+[data-theme="light"] .pmx-page span,
+[data-theme="light"] .support-runner-page p,
+[data-theme="light"] .support-runner-page dt,
+[data-theme="light"] .support-runner-page dd,
+[data-theme="light"] .support-console-section p,
+[data-theme="light"] .support-console-section span,
+[data-theme="light"] .support-console-section td,
+[data-theme="light"] .support-console-section th { color: var(--text-secondary); }
+[data-theme="light"] .pmx-page svg text,
+[data-theme="light"] .support-runner-page svg text { fill: var(--text-secondary) !important; }
+[data-theme="light"] .pmx-page .pmx-chart-empty,
+[data-theme="light"] .support-runner-page .pmx-chart-empty {
+  color: var(--text-muted); background: var(--bg-elevated); border-color: var(--border);
+}
+
+/* Calendar: replace dark board and dark inherited text in light mode. */
+[data-theme="light"] .calendar-guidance,
+[data-theme="light"] .runplan-calendar-board,
+[data-theme="light"] .runplan-calendar-day,
+[data-theme="light"] .runplan-calendar-week-total,
+[data-theme="light"] .runplan-calendar-weekday,
+[data-theme="light"] .split-workspace .plan-card,
+[data-theme="light"] .split-workspace .panel {
+  color: var(--text) !important; background-color: var(--bg-surface) !important;
+  background-image: none !important; border-color: var(--border) !important;
+}
+[data-theme="light"] .runplan-calendar-board { box-shadow: var(--shadow-card); }
+[data-theme="light"] .runplan-calendar-day { background: #fff !important; }
+[data-theme="light"] .runplan-calendar-day.outside-month { background: #f4f7fb !important; opacity: 1; }
+[data-theme="light"] .runplan-calendar-date,
+[data-theme="light"] .runplan-calendar-weekday,
+[data-theme="light"] .runplan-calendar-week-total,
+[data-theme="light"] .runplan-calendar-rest,
+[data-theme="light"] .calendar-guidance h2,
+[data-theme="light"] .calendar-guidance h3,
+[data-theme="light"] .calendar-guidance strong,
+[data-theme="light"] .split-workspace h2,
+[data-theme="light"] .split-workspace h3,
+[data-theme="light"] .split-workspace strong { color: var(--text) !important; }
+[data-theme="light"] .calendar-guidance p,
+[data-theme="light"] .calendar-guidance span,
+[data-theme="light"] .split-workspace p,
+[data-theme="light"] .split-workspace dt,
+[data-theme="light"] .split-workspace dd { color: var(--text-secondary); }
+[data-theme="light"] .runplan-calendar-session { color: #172033 !important; border-color: var(--border-strong); }
+[data-theme="light"] .runplan-calendar-legend { color: var(--text-secondary); }
+[data-theme="light"] .support-tabs button { color: var(--text-secondary); }
+[data-theme="light"] .support-tabs button.active {
+  color: var(--accent); background: var(--bg-active); border-color: var(--border-accent);
 }

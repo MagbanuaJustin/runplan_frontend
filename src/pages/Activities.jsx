@@ -79,6 +79,7 @@ export default function Activities() {
                 ? selectedSession.scheduled_date
                 : today,
             distance: String(selectedSession.planned_distance_km),
+            workoutType: selectedSession.type,
         }
         : null
 

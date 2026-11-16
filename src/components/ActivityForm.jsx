@@ -80,6 +80,7 @@ export default function ActivityForm({
           distance: String(activity.distance_km),
           duration: formatDuration(activity.duration_seconds),
           effort: activity.effort ?? '',
+          workoutType: activity.workout_type ?? '',
           notes: activity.notes ?? '',
         }
       : {
@@ -87,6 +88,7 @@ export default function ActivityForm({
           distance: defaults?.distance ?? '',
           duration: '',
           effort: '',
+          workoutType: defaults?.workoutType ?? '',
           notes: '',
         },
   )
@@ -106,6 +108,7 @@ export default function ActivityForm({
       distance: 'distance_km',
       duration: 'duration_seconds',
       effort: 'effort',
+      workoutType: 'workout_type',
       notes: 'notes',
     }[key]
 
@@ -168,6 +171,20 @@ export default function ActivityForm({
       nextErrors.effort = 'Enter a whole number from 1 to 10.'
     }
 
+    const allowedWorkoutTypes = [
+      'easy',
+      'long',
+      'tempo',
+      'threshold',
+      'interval',
+      'recovery',
+      'race',
+    ]
+
+    if (!allowedWorkoutTypes.includes(form.workoutType)) {
+      nextErrors.workout_type = 'Choose the workout type for this run.'
+    }
+
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors)
       return
@@ -182,6 +199,7 @@ export default function ActivityForm({
         distance_km: form.distance.trim(),
         duration_seconds: seconds,
         effort: form.effort === '' ? null : form.effort,
+        workout_type: form.workoutType,
         notes: form.notes,
         ...(sessionId ? { session_id: sessionId } : {}),
       }
@@ -196,6 +214,7 @@ export default function ActivityForm({
           distance: '',
           duration: '',
           effort: '',
+          workoutType: sessionId ? current.workoutType : '',
           notes: '',
         }))
       }
@@ -274,6 +293,32 @@ export default function ActivityForm({
           value={form.effort}
           onChange={set('effort')}
         />
+      </Field>
+
+      <Field
+        id={`${prefix}workout-type`}
+        label="Workout type"
+        error={errors.workout_type}
+      >
+        <select
+          {...attrs('workout-type', 'workout_type')}
+          value={form.workoutType}
+          onChange={set('workoutType')}
+          disabled={Boolean(sessionId)}
+          required
+        >
+          <option value="">Select workout type</option>
+          <option value="easy">Easy</option>
+          <option value="long">Long</option>
+          <option value="tempo">Tempo</option>
+          <option value="threshold">Threshold</option>
+          <option value="interval">Interval</option>
+          <option value="recovery">Recovery</option>
+          <option value="race">Race</option>
+        </select>
+        {sessionId && (
+          <small>Using the workout type from your linked training session.</small>
+        )}
       </Field>
 
       <Field

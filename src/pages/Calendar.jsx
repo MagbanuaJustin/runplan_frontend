@@ -1091,90 +1091,95 @@ export default function Calendar() {
                   className="inline-reschedule"
                   onSubmit={(e) => submitEdit(e, session)}
                 >
-                  <style>{`
-                    .workout-edit-select-wrap {
-                      position: relative;
-                    }
+              <style>{`
+              .workout-edit-select-wrap {
+                 position: relative;
+              }
 
-                    .workout-edit-select {
-                      appearance: none;
-                      width: 100%;
-                      min-height: 46px;
-                      padding: 11px 42px 11px 13px;
-                      border: 1px solid var(--border, #3a4658);
-                      border-radius: 10px;
-                      background: var(--surface-2, #202938);
-                      color: var(--text, #f3f6fb);
-                      font: inherit;
-                      font-weight: 600;
-                      cursor: pointer;
-                      transition: border-color .18s, box-shadow .18s;
-                    }
+              .workout-edit-select {
+                appearance: none;
+                width: 100%;
+                min-height: 46px;
+                padding: 11px 42px 11px 13px;
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                background: var(--bg-input);
+                color: var(--text);
+                font: inherit;
+                font-weight: 600;
+                cursor: pointer;
+                color-scheme: inherit;
+                transition: border-color .18s, box-shadow .18s;
+              }
 
-                    .workout-edit-select:focus {
-                      outline: none;
-                      border-color: var(--accent, #4f8cff);
-                      box-shadow: 0 0 0 3px rgba(79,140,255,.18);
-                    }
+              .workout-edit-select:focus {
+                outline: none;
+                border-color: var(--accent);
+                box-shadow: 0 0 0 3px rgba(79, 140, 255, .18);
+              }
 
-                    .workout-edit-select-wrap::after {
-                      content: '';
-                      position: absolute;
-                      right: 16px;
-                      top: 50%;
-                      width: 8px;
-                      height: 8px;
-                      border-right: 2px solid currentColor;
-                      border-bottom: 2px solid currentColor;
-                      transform: translateY(-70%) rotate(45deg);
-                      pointer-events: none;
-                      opacity: .8;
-                    }
+              .workout-edit-select-wrap::after {
+                content: '';
+                position: absolute;
+                right: 16px;
+                top: 50%;
+                width: 8px;
+                height: 8px;
+                border-right: 2px solid currentColor;
+                border-bottom: 2px solid currentColor;
+                transform: translateY(-70%) rotate(45deg);
+                pointer-events: none;
+                opacity: .8;
+              }
 
-                    .workout-edit-select option {
-                      background: #202938;
-                      color: #f3f6fb;
-                    }
+              .workout-edit-select option {
+                background: var(--bg-surface);
+                color: var(--text);
+              }
 
-                    .workout-notes-wrap {
-                      padding: 12px;
-                      border: 1px solid var(--border, #3a4658);
-                      border-radius: 12px;
-                      background: var(--surface-2, #202938);
-                    }
+              .workout-notes-wrap {
+                padding: 12px;
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                background: var(--bg-elevated);
+              }
 
-                    .workout-notes-textarea {
-                      display: block;
-                      width: 100%;
-                      min-height: 112px;
-                      padding: 12px;
-                      border: 1px solid var(--border, #3a4658);
-                      border-radius: 9px;
-                      background: var(--surface, #151c27);
-                      color: var(--text, #f3f6fb);
-                      font: inherit;
-                      line-height: 1.5;
-                      resize: vertical;
-                      box-sizing: border-box;
-                      transition: border-color .18s, box-shadow .18s;
-                    }
+              .workout-notes-textarea {
+                display: block;
+                width: 100%;
+                min-height: 112px;
+                padding: 12px;
+                border: 1px solid var(--border);
+                border-radius: 9px;
+                background: var(--bg-input);
+                color: var(--text);
+                font: inherit;
+                line-height: 1.5;
+                resize: vertical;
+                box-sizing: border-box;
+                transition: border-color .18s, box-shadow .18s;
+              }
 
-                    .workout-notes-textarea:focus {
-                      outline: none;
-                      border-color: var(--accent, #4f8cff);
-                      box-shadow: 0 0 0 3px rgba(79,140,255,.18);
-                    }
+              .workout-notes-textarea::placeholder {
+                color: var(--text-muted);
+                opacity: 1;
+              } 
 
-                    .workout-notes-meta {
-                      display: flex;
-                      justify-content: space-between;
-                      gap: 12px;
-                      margin-top: 8px;
-                      color: var(--muted, #9aa8ba);
-                      font-size: 12px;
-                    }
-                  `}</style>
+              .workout-notes-textarea:focus {
+                outline: none;
+                border-color: var(--accent);
+                box-shadow: 0 0 0 3px rgba(79, 140, 255, .18);
+              }
 
+              .workout-notes-meta {
+                display: flex;
+                justify-content: space-between;
+                gap: 12px;
+                margin-top: 8px;
+                color: var(--text-muted);
+                font-size: 12px;
+              }
+              `}</style>
                   <label
                     className="field"
                     htmlFor="edit-workout-type"
